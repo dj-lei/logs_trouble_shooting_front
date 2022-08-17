@@ -562,7 +562,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 html, body {
   font-family: 'Lato', sans-serif;
   overflow: hidden;

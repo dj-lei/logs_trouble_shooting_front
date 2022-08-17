@@ -3,10 +3,8 @@
 import Vue from 'vue'
 import App from './App'
 import Vuetify from 'vuetify'
-import VueRouter from 'vue-router'
-Vue.use(VueRouter)
-
 import 'vuetify/dist/vuetify.min.css'
+
 import service from '@/plugins/http'
 import urls from '@/plugins/urls'
 import common from '@/plugins/common'
@@ -18,10 +16,12 @@ import Home from './components/Home.vue'
 Vue.config.productionTip = false
 Vue.use(Vuetify)
 
-
 Vue.prototype.$http = service
 Vue.prototype.$urls = urls
 Vue.prototype.$common = common
+
+import VueRouter from 'vue-router'
+Vue.use(VueRouter)
 
 const router = new VueRouter({
   routes: [
@@ -32,7 +32,7 @@ const router = new VueRouter({
 });
 
 new Vue({
-  router,
   vuetify: new Vuetify(),
+  router,
   render: h => h(App)
 }).$mount('#app')
