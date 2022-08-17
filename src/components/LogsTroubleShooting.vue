@@ -1,45 +1,46 @@
 <template lang="pug">
-  div(style="background-color:#555")
-    div(id="topnav" class="topnav")
-      a(class="index") {{index}}
-    div(id="side-nav" class="sidenav")
-      a(id="highlight" @click="openHighlightModal") Highlight
-      a(id="filter" @click="openFilterModal") Filter
-    div(id="highlight-modal" class="modal")
-      div(class="modal-content")
-        div(class="modal-header")
-          h2 Keyword Highlight List
-          input(class="modal-input-text" type="text" id="highlight-input" placeholder="Keyword1,Keyword2,Keyword3...")
-          input(class="modal-input-color" type="color" id="highlight-color")
-          span(class="addBtn" @click="newHighlightItem") Add
-        ul(id="highlight-list" style="list-style: none;")
-    div(id="filter-modal" class="modal")
-      div(class="modal-content")
-        div(class="modal-header")
-          h2 Filter Graph
-          input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
-          //- v-on:scroll="scrollLogDetail"
-    div(id="log-detail" class="overlay")
-      div(class="overlay-content")
-        div(id="log-detail-navbar" class="navbar")
-          //- a Filter
-          a(class="button" @click="openGraphDetail") Graph
-          a(class="button" @click="closeLogDetail") Cancel
-          a(class="title") {{ process }}
-        table(id='content')
-    div(id="graph-detail" class="overlay-graph" style="left: 100%;")
-      div(id='graphs' class="overlay-content")
-    template(v-if="isDiff === false")
-      div(id="painting0" class="column-single")
-        svg(id="viz0" :height="height" :width="width")
-        div(id="tooltip0")
-    template(v-else)
-      div(id="painting0" class="column-double")
-        svg(id="viz0" :height="height" :width="width")
-        div(id="tooltip0")
-      div(id="painting1" class="column-double")
-        svg(id="viz1" :height="height" :width="width")
-        div(id="tooltip1")
+  v-app(dark)
+    div(style="background-color:#555")
+      div(id="topnav" class="topnav")
+        a(class="index") {{index}}
+      div(id="side-nav" class="sidenav")
+        a(id="highlight" @click="openHighlightModal") Highlight
+        a(id="filter" @click="openFilterModal") Filter
+      div(id="highlight-modal" class="modal")
+        div(class="modal-content")
+          div(class="modal-header")
+            h2 Keyword Highlight List
+            input(class="modal-input-text" type="text" id="highlight-input" placeholder="Keyword1,Keyword2,Keyword3...")
+            input(class="modal-input-color" type="color" id="highlight-color")
+            span(class="addBtn" @click="newHighlightItem") Add
+          ul(id="highlight-list" style="list-style: none;")
+      div(id="filter-modal" class="modal")
+        div(class="modal-content")
+          div(class="modal-header")
+            h2 Filter Graph
+            input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
+            //- v-on:scroll="scrollLogDetail"
+      div(id="log-detail" class="overlay")
+        div(class="overlay-content")
+          div(id="log-detail-navbar" class="navbar")
+            //- a Filter
+            a(class="button" @click="openGraphDetail") Graph
+            a(class="button" @click="closeLogDetail") Cancel
+            a(class="title") {{ process }}
+          table(id='content')
+      div(id="graph-detail" class="overlay-graph" style="left: 100%;")
+        div(id='graphs' class="overlay-content")
+      template(v-if="isDiff === false")
+        div(id="painting0" class="column-single")
+          svg(id="viz0" :height="height" :width="width")
+          div(id="tooltip0")
+      template(v-else)
+        div(id="painting0" class="column-double")
+          svg(id="viz0" :height="height" :width="width")
+          div(id="tooltip0")
+        div(id="painting1" class="column-double")
+          svg(id="viz1" :height="height" :width="width")
+          div(id="tooltip1")
 </template>
 
 <script>

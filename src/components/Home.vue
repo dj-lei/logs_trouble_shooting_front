@@ -1,42 +1,43 @@
 <template lang="pug">
-  div(class="row")
-    div(class="page-left" style="background-color:#000000;height:100%;")
-      h2 Running Log Analysis
-      ul(id="running-log" class="running-log")
-        //- li
-        //-   a lte_ciasihan_bgr_gh_bxp_2053_telog
-        //-     div(class="loader")
-    div(class="page-right")
-      div(id="topnav" class="topnav")
-        a(@click="go") GO
-        a(@click="upload") UPLOAD
-        input(id="fileInput" type="file" style="display:none" multiple)
-      div(class="split left")
-        input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
-        div(class="groups")
-          ul(id="groups1")
-      div(class="split right")
-        div(class="groups")
-          ul(id="groups2")
-      //- form
-      //-   div(class="row")
-      //-       h2(class="headertekst") TroubleShooting
-      //-   div(class="container")
-      //-     div(class="row")
-      //-       div(class="vl")
-      //-         span(class="vl-innertext") VS
-      //-       div(class="col")
-      //-         input(id="input1" type="text" name="search" placeholder="Search.." required @focus="inputEvent" v-on:keyup="filter")
-      //-         div(id="dropdown" class="dropdown")
-      //-       div(class="col")
-      //-         input(type="text" name="search" placeholder="Search.." disabled)
-      //- div(class="bottom-container")
-      //-   //- router-link(to="logs" style="color:white" class="btn") GO
-      //-   div(class="col")
-      //-     a(style="color:white" class="btn" @click="go") GO
-      //-   div(class="col")
-      //-     a(style="color:white" class="btn" @click="upload") UPLOAD
-      //-     input(id="fileInput" type="file" style="display:none" multiple)
+  v-app(dark)
+    div(class="row")
+      div(class="page-left" style="background-color:#000000;height:100%;")
+        h2 Running Log Analysis
+        ul(id="running-log" class="running-log")
+          //- li
+          //-   a lte_ciasihan_bgr_gh_bxp_2053_telog
+          //-     div(class="loader")
+      div(class="page-right")
+        div(id="topnav" class="topnav")
+          a(@click="go") GO
+          a(@click="upload") UPLOAD
+          input(id="fileInput" type="file" style="display:none" multiple)
+        div(class="split left")
+          input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
+          div(class="groups")
+            ul(id="groups1")
+        div(class="split right")
+          div(class="groups")
+            ul(id="groups2")
+        //- form
+        //-   div(class="row")
+        //-       h2(class="headertekst") TroubleShooting
+        //-   div(class="container")
+        //-     div(class="row")
+        //-       div(class="vl")
+        //-         span(class="vl-innertext") VS
+        //-       div(class="col")
+        //-         input(id="input1" type="text" name="search" placeholder="Search.." required @focus="inputEvent" v-on:keyup="filter")
+        //-         div(id="dropdown" class="dropdown")
+        //-       div(class="col")
+        //-         input(type="text" name="search" placeholder="Search.." disabled)
+        //- div(class="bottom-container")
+        //-   //- router-link(to="logs" style="color:white" class="btn") GO
+        //-   div(class="col")
+        //-     a(style="color:white" class="btn" @click="go") GO
+        //-   div(class="col")
+        //-     a(style="color:white" class="btn" @click="upload") UPLOAD
+        //-     input(id="fileInput" type="file" style="display:none" multiple)
 </template>
 
 <script>

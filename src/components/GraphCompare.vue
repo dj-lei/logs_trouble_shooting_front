@@ -1,15 +1,15 @@
 <template lang="pug">
   //- div(style="background-color:#000000")
-  div(class="page")
-    div(id="topnav" class="topnav")
-      form(class="form-inline")
-        label Process:
-        input(id="process" type="text")
-        label Keywords:
-        input(id="keywords" type="text")
-        a(@click="go") GO
-    div(id="graphs" class="graphs")
-
+  v-app(dark)
+    div(class="page")
+      div(id="topnav" class="topnav")
+        form(class="form-inline")
+          label Process:
+          input(id="process" type="text")
+          label Keywords:
+          input(id="keywords" type="text")
+          a(@click="go") GO
+      div(id="graphs" class="graphs")
 </template>
 
 <script>
