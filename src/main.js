@@ -3,7 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import Vuetify from 'vuetify'
-import 'vuetify/dist/vuetify.min.css'
+import '@/assets/vuetify.min.css'
 
 import service from '@/plugins/http'
 import urls from '@/plugins/urls'
