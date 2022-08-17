@@ -1,31 +1,42 @@
 <template lang="pug">
   div(class="row")
-    div(class="left" style="background-color:#000000;height:100%;")
+    div(class="page-left" style="background-color:#000000;height:100%;")
       h2 Running Log Analysis
       ul(id="running-log" class="running-log")
         //- li
         //-   a lte_ciasihan_bgr_gh_bxp_2053_telog
         //-     div(class="loader")
-    div(class="right" style="background-color:#000000;height:100%;")
-      form
-        div(class="row")
-            h2(class="headertekst") TroubleShooting
-        div(class="container")
-          div(class="row")
-            div(class="vl")
-              span(class="vl-innertext") VS
-            div(class="col")
-              input(id="input1" type="text" name="search" placeholder="Search.." required @focus="inputEvent" v-on:keyup="filter")
-              div(id="dropdown" class="dropdown")
-            div(class="col")
-              input(type="text" name="search" placeholder="Search.." disabled)
-      div(class="bottom-container")
-        //- router-link(to="logs" style="color:white" class="btn") GO
-        div(class="col")
-          a(style="color:white" class="btn" @click="go") GO
-        div(class="col")
-          a(style="color:white" class="btn" @click="upload") UPLOAD
-          input(id="fileInput" type="file" style="display:none" multiple)
+    div(class="page-right")
+      div(id="topnav" class="topnav")
+        a(@click="go") GO
+        a(@click="upload") UPLOAD
+        input(id="fileInput" type="file" style="display:none" multiple)
+      div(class="split left")
+        input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
+        div(class="groups")
+          ul(id="groups1")
+      div(class="split right")
+        div(class="groups")
+          ul(id="groups2")
+      //- form
+      //-   div(class="row")
+      //-       h2(class="headertekst") TroubleShooting
+      //-   div(class="container")
+      //-     div(class="row")
+      //-       div(class="vl")
+      //-         span(class="vl-innertext") VS
+      //-       div(class="col")
+      //-         input(id="input1" type="text" name="search" placeholder="Search.." required @focus="inputEvent" v-on:keyup="filter")
+      //-         div(id="dropdown" class="dropdown")
+      //-       div(class="col")
+      //-         input(type="text" name="search" placeholder="Search.." disabled)
+      //- div(class="bottom-container")
+      //-   //- router-link(to="logs" style="color:white" class="btn") GO
+      //-   div(class="col")
+      //-     a(style="color:white" class="btn" @click="go") GO
+      //-   div(class="col")
+      //-     a(style="color:white" class="btn" @click="upload") UPLOAD
+      //-     input(id="fileInput" type="file" style="display:none" multiple)
 </template>
 
 <script>
@@ -78,7 +89,7 @@ export default {
         .then(response => {
           if(this.indices.length != response.data.content.length){
             this.indices = response.data.content
-            this.clearChildDoms('dropdown')
+            this.clearChildDoms('groups1')
             this.createDropDown()
           }
         })
@@ -102,15 +113,33 @@ export default {
       })
     },
     createDropDown(){
-      this.indices.forEach((index) => {
-        var element = document.createElement("a")
-        element.setAttribute('id', index)
-        element.innerText = index
-        element.onclick = function(){
-          document.getElementById('input1').value = index
-          document.getElementById("dropdown").classList.toggle("show");
+      var indices_sort = this.indices.sort()
+      indices_sort.forEach((index) => {
+        var elementLeft = document.createElement("li")
+        elementLeft.setAttribute('id', index)
+        elementLeft.innerText = index
+        elementLeft.onclick = function(){
+          var elementRight = document.createElement("li")
+          elementRight.setAttribute('id', index)
+          elementRight.innerText = index
+
+          var span = document.createElement("SPAN");
+          var txt = document.createTextNode("\u00D7");
+          span.className = "close-list";
+          span.appendChild(txt);
+          elementRight.appendChild(span);
+          document.getElementById("groups2").appendChild(elementRight)
+
+          var close = document.getElementsByClassName("close-list");
+          for (var i = 0; i < close.length; i++) {
+            close[i].onclick = function() {
+              let p = this.parentElement
+              this.parentElement.removeChild(this)
+              p.parentElement.removeChild(p);
+            }
+          }
         }
-        document.getElementById('dropdown').appendChild(element)
+        document.getElementById('groups1').appendChild(elementLeft)
       })
     },
     upload(){
@@ -140,19 +169,22 @@ export default {
       })
     },
     go() {
-      clearInterval(this.interval)
-      this.$router.push({path: '/logs', query:{index: document.getElementById('input1').value}});
-      // window.open(routeData.href, '_blank');
-    },
-    inputEvent(){
-      document.getElementById("dropdown").classList.toggle("show");
+      var ul, li, i
+      var params = []
+      ul = document.getElementById("groups2");
+      li = ul.getElementsByTagName("li");
+      for (i = 0; i < li.length; i++) {
+        params.push(li[i].innerText.split(/\n/)[0])
+      }
+      let routeData = this.$router.resolve({path: '/graphCompare', query:{index: params.join(",")}});
+      window.open(routeData.href, '_blank');
     },
     filter(){
       var input, filter, div, a, i, txtValue;
       input = document.getElementById("input1");
       filter = input.value.toUpperCase();
-      div = document.getElementById("dropdown");
-      a = div.getElementsByTagName("a");
+      div = document.getElementById("groups1");
+      a = div.getElementsByTagName("li");
       for (i = 0; i < a.length; i++) {
         txtValue = a[i].textContent || a[i].innerText;
         if (txtValue.toUpperCase().indexOf(filter) > -1) {
@@ -181,21 +213,95 @@ body {
   display: flex;
 }
 
-.left {
+.page-left {
   flex: 20%;
   border: 1px solid #888;
-  padding: 15px 10px;
+  padding: 10px 10px;
 }
 
-.left h2 {
+.page-left h2 {
   color: rgb(255, 255, 255);
   text-align: center;
   padding: 15px 0;
 }
 
-.right {
+.page-right {
   flex: 80%;
-  padding: 15px;
+  padding: 2px;
+}
+
+.topnav {
+  width: 100%; /* Full-width */
+  background-color: #333; /* Dark-grey background */
+  overflow: hidden; /* Overflow due to float */
+}
+
+.topnav a {
+  text-align: center; /* Center-align text */
+  float: left;
+  width: 50%; /* Equal width (5 icons with 20% width each = 100%) */
+  color: white; /* White text color */
+  font-size: 36px; /* Increased font size */
+  border: 1px solid black;
+}
+
+.topnav a:hover {
+  background-color: #000; /* Add a hover color */
+}
+
+.split {
+  height: 100%;
+  width: 50%;
+  position: relative;
+  z-index: 1;
+  top: 0;
+  overflow-x: hidden;
+}
+
+/* Control the left side */
+.left {
+  float: left;
+  left: 0;
+  background-color: #ddd;
+}
+
+/* Control the right side */
+.right {
+  right: 0;
+  background-color: #ddd;
+}
+
+#input1{
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #ddd;
+  background-color: #ffffff;
+}
+
+.groups{
+  position: absolute;
+  width: 100%;
+  overflow: auto;
+}
+
+.groups ul{
+  list-style-type: none; /* Remove bullets */
+  padding: 0; /* Remove padding */
+  margin: 0; /* Remove margins */
+}
+
+.groups ul li {
+  border: 1px solid #ddd; /* Add a thin border to each list item */
+  margin-top: -1px; /* Prevent double borders */
+  background-color: #f6f6f6; /* Add a grey background color */
+  padding: 12px; /* Add some padding */
+}
+
+.groups ul li:hover,
+.groups ul li:focus {
+  background-color: #666;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .running-log {
@@ -234,93 +340,14 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* style the container */
-.container {
-  position: relative;
-  border-radius: 5px;
-  background-color: #f2f2f2;
-  margin-top: 50px;
-  padding: 20px 0 30px 0;
-} 
-
-/* bottom container */
-.bottom-container {
-  text-align: center;
-  background-color: #666;
-  border-radius: 200px 200px 200px 200px;
-  margin-top: 10px;
-  margin-left: 500px;
-  margin-right: 500px;
-  /* padding: 20px 0 30px 0; */
+/* Style the close button */
+.close-list {
+  float: right;
+  padding: 0px 20px 10px 20px;
 }
-
-.col {
-  float: left;
-  width: 50%;
-  margin: auto;
-  padding: 0 50px;
-  margin-top: 60px;
-}
-
-.dropdown {
-  position: fixed;
-  z-index: 1;
-  display: none;
-  background-color: #f6f6f6;
-  min-width: 230px;
-  overflow: auto;
-  top:30%;
-  border: 1px solid #ddd;
-}
-
-.dropdown a {
-  color: black;
-  background-color: rgb(139, 139, 139);
-  padding: 12px 16px;
-  text-decoration: none;
-  border: 1px solid #ddd;
-  display: block;
-}
-.dropdown a:hover {background-color: #ddd;}
-.show {display: block;}
-
-/* style inputs and link buttons */
-input {
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  width: 100%;
-  padding: 10px;
-  float: left;
-  font-size: 16px;
-  background-color: white;
-}
-
-.btn {
-  background-color: rgb(139, 139, 139);
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 4px;
-  margin: 5px 0;
-  opacity: 0.85;
-  display: inline-block;
-  font-size: 17px;
-  line-height: 20px;
-  text-decoration: none; /* remove underline from anchors */
-}
-
-input:hover,
-.btn:hover {
-  opacity: 1;
-}
-
-/* Two-column layout */
-h2.headertekst {
-  width: 100%;
-  margin-top: 100px;
-  text-align: center;
-  color: rgb(255, 255, 255);
+.close-list:hover {
+  background-color: #f44336;
+  color: white;
 }
 
 /* vertical line */
@@ -329,7 +356,7 @@ h2.headertekst {
   left: 50%;
   transform: translate(-50%);
   border: 2px solid #ddd;
-  height: 120px;
+  height: 100%;
 }
 
 /* text inside the vertical line */

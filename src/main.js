@@ -12,6 +12,7 @@ import urls from '@/plugins/urls'
 import common from '@/plugins/common'
 
 import LogsTroubleShooting from './components/LogsTroubleShooting.vue'
+import GraphCompare from './components/GraphCompare.vue'
 import Home from './components/Home.vue'
 
 Vue.config.productionTip = false
@@ -26,6 +27,7 @@ const router = new VueRouter({
   routes: [
     { path: '/', component: Home },
     { path: '/logs', component: LogsTroubleShooting },
+    { path: '/graphCompare', component: GraphCompare },
   ]
 });
 

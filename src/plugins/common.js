@@ -66,6 +66,14 @@ export default {
         tooltip: {
           trigger: 'axis',
           show: true,
+          layout: 'vertical',
+          formatter: (params) => {
+            var ret = ''
+            params.forEach((param) => {
+              ret = ret + param.marker + "Value:" + param.value + '<br/>'         
+            })
+            return ret;
+          },
           feature: {
             saveAsImage: {
               show: true,
@@ -75,7 +83,15 @@ export default {
           }
         },
         legend: {
-          data: []
+          data: [],
+          itemWidth:12,
+          itemHeight:12,
+          left:'20%',
+          // type: 'scroll',
+          // orient: "vertical",
+          textStyle: {
+            fontSize: '10',
+          },
         },
         xAxis: {
           // type: 'category',

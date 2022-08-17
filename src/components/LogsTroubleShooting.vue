@@ -1,6 +1,7 @@
 <template lang="pug">
-  div(style="background-color:#000000")
+  div(style="background-color:#555")
     div(id="topnav" class="topnav")
+      a(class="index") {{index}}
     div(id="side-nav" class="sidenav")
       a(id="highlight" @click="openHighlightModal") Highlight
       a(id="filter" @click="openFilterModal") Filter
@@ -23,9 +24,10 @@
         div(id="log-detail-navbar" class="navbar")
           //- a Filter
           a(class="button" @click="openGraphDetail") Graph
-          a(href="javascript:void(0)" class="closebtn" @click="closeLogDetail") &times;
+          a(class="button" @click="closeLogDetail") Cancel
+          a(class="title") {{ process }}
         table(id='content')
-    div(id="graph-detail" class="overlay" style="left: 100%;")
+    div(id="graph-detail" class="overlay-graph" style="left: 100%;")
       div(id='graphs' class="overlay-content")
     template(v-if="isDiff === false")
       div(id="painting0" class="column-single")
@@ -53,10 +55,14 @@ export default {
         bottom: 30,
         left: 30
       },
+      index: '',
+      process: '',
+      kv: '',
+      dataIndex: 0,
       devices: [],
       isDiff: false,
       filterGraphs: ['pma', 'pmb', 'txatt'],
-      highlightKeyword: {},
+      highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       prevScrollpos: 0,
 
       svg: '',
@@ -87,7 +93,42 @@ export default {
     this.height = document.body.offsetHeight
     document.getElementById("filter-input").value = this.filterGraphs.join(",")
 
-    this.getStoryLines (new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`).get('index'))
+    Object.keys(this.highlightKeyword).forEach((key) => {
+      var li = document.createElement("li");
+      var t = document.createElement("input");
+      t.setAttribute('class', "text")
+      t.setAttribute('value', key)
+      var c = document.createElement("input")
+      c.setAttribute('type', "color")
+      c.setAttribute('class', "color")
+      c.setAttribute('value', this.highlightKeyword[key])
+      li.appendChild(t)
+      li.appendChild(c)
+      
+      var span = document.createElement("SPAN");
+      var txt = document.createTextNode("\u00D7");
+      span.className = "close-list";
+      span.appendChild(txt);
+      li.appendChild(span);
+      document.getElementById("highlight-list").appendChild(li);
+
+      var close = document.getElementsByClassName("close-list");
+      for (var i = 0; i < close.length; i++) {
+        close[i].onclick = function() {
+          var key = this.parentElement.querySelector('.text').value
+          delete that.highlightKeyword[key]
+          this.parentElement.style.display = "none";
+        }
+      }
+    })
+
+    var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
+    this.index = url.get('index')
+    this.process = url.get('process')
+    this.kv = url.get('kv')
+    this.dataIndex = url.get('dataIndex')
+    this.getStoryLines (this.index)
+
     window.onclick = function(event) {
       if (event.target == document.getElementById("highlight-modal")) {
         that.createHighlightPoint()
@@ -115,6 +156,14 @@ export default {
           this.resetCoordinates()
           this.createTopNav()
           this.createGraph(0)
+          this.createHighlightPoint()
+          for (var i = 0; i < this.data.length; i++) {
+            if(this.data[i]['process'] == this.process){
+              this.graphLogData = this.data[i]
+              this.openLogDetail(parseInt(this.graphLogData.kv[this.kv][this.graphLogData.kv[this.kv].length-1][this.dataIndex]))
+              break
+            }
+          }
           // this.createGraph(2)
           // this.logs()
         })
@@ -132,14 +181,14 @@ export default {
       this.devices.forEach((device, index) => {
         var a = document.createElement("a")
         if(index == 0){
-          a.setAttribute('class', 'active')
+          a.setAttribute('class', 'dev active')
         }
         a.innerHTML = device
         document.getElementById("topnav").appendChild(a)
 
         a.onclick = function() {
           document.getElementsByClassName("active")[0].removeAttribute("class");
-          this.setAttribute('class', 'active')
+          this.setAttribute('class', 'dev active')
           d3.select("#canvas").remove()
           d3.select("#viz0").call(that.zoom.transform, d3.zoomIdentity)
           that.data = that.allData[this.innerHTML]
@@ -162,7 +211,7 @@ export default {
       function getTooltipContent(d) {
         var res = ''
         d.forEach((log) => {
-          var style = '<b>'
+          var style = '<b style="color:#FFFFFF">'
           Object.keys(that.highlightKeyword).forEach((item) => {
             item.split(/,/).forEach((key) => {
               if (that.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
@@ -183,7 +232,7 @@ export default {
           .style("pointer-events", "none")
           .style("top", 0)
           .style("opacity", 0)
-          .style("background", "white")
+          .style("background", "black")
           .style("border-radius", "5px")
           .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
           .style("padding", "10px")
@@ -215,7 +264,7 @@ export default {
       }
       
       let filteredData = this.data;
-      filteredData.forEach(d=> d.color = "#FFFFFF")
+      filteredData.forEach(d=> d.color = "#333")
       this.svg = d3.select(`#viz${number}`).append("g")
                     .attr("id", "canvas")
                     .style("font", "8px sans-serif");
@@ -257,6 +306,7 @@ export default {
           var arr = Object.entries(that.subData.msg)
           var pos = d3.bisect(Object.keys(that.subData.msg).map(item => {return parseInt(item)}), that.xAxis.invert(x));
           var tmp = arr.slice(pos - that.logNum < 0 ? 0 : pos - that.logNum, pos + that.logNum > arr.length ? arr.length : pos + that.logNum);
+          that.process = d['process']
           that.graphLogData = d
           that.openLogDetail(parseInt(tmp[0][1].split("||")[0]))
         })
@@ -347,12 +397,13 @@ export default {
         var tr = document.createElement("tr")
         tr.setAttribute('id', `log${logIndex}`)
         var td = document.createElement("td")
+        td.style.color = "#FFFFFF"
         Object.keys(this.highlightKeyword).forEach((item) => {
           item.split(/,/).forEach((key) => {
             if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
               if (this.invertedIndexTable[key]['x'].includes(num)){
                 td.style.color = this.highlightKeyword[item]
-              }          
+              }  
             }
           })
         })
@@ -538,8 +589,19 @@ html, body {
   z-index: 1;
   top: 0;
   left: 0;
-  background-color: rgb(255, 255, 255);
-  background-color: rgba(255,255,255, 0.9);
+  background-color: rgb(0, 0, 0);
+  overflow-x: scroll;
+  transition: 0.5s;
+}
+
+.overlay-graph {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: rgb(255, 255, 255,0.9);
   overflow-x: scroll;
   transition: 0.5s;
 }
@@ -556,7 +618,7 @@ html, body {
 .overlay-content .navbar {
   display: none;
   overflow: hidden;
-  background-color: #333; /* Black background color */
+  background-color: #555; /* Black background color */
   position: fixed;
   top: 0; /* Stay on top */
   width: 50%; /* Full width */
@@ -573,6 +635,21 @@ html, body {
   text-decoration: none;
   font-size: 24px;
   transition: 0.3s;
+  border: 1px solid black;
+}
+
+.navbar .button:hover {
+  background-color: #000; /* Add a hover color */
+}
+
+.navbar .title {
+  float: right;
+  color: white;
+  display: block;
+  padding: 5px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 24px;
 }
 
 table {
@@ -589,37 +666,30 @@ th, td {
   border: 1px solid black;
 }
 
-tr:nth-child(even) {
-  background-color: #f2f2f2;
-}
+/* tr:nth-child(even) {
+  background-color: #333;
+} */
 
 .graphs {
   border: 1px solid black;
 }
 
-/* The Close Button */
-.closebtn {
-  color: #ffffff;
-  text-decoration: none;
-  margin-right: 10px;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.closebtn:hover,
-.closebtn:focus {
-  color: #000;
-  text-decoration: none;
-  cursor: pointer;
-}
 /***************************************** top nav css */
 .topnav {
   overflow: hidden;
   background-color: #333;
 }
 
-.topnav a {
+.topnav .index {
+  float: right;
+  color: #f2f2f2;
+  text-align: center;
+  padding: 7px 16px;
+  text-decoration: none;
+  font-size: 17px;
+}
+
+.topnav .dev {
   float: left;
   color: #f2f2f2;
   text-align: center;
@@ -628,12 +698,12 @@ tr:nth-child(even) {
   font-size: 17px;
 }
 
-.topnav a:hover {
+.topnav .dev:hover {
   background-color: #ddd;
   color: black;
 }
 
-.topnav a.active {
+.topnav .dev.active {
   background-color: #04AA6D;
   color: white;
 }
