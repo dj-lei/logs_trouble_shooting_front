@@ -159,13 +159,6 @@ export default {
 </script>
 
 <style>
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
 
 .topnav {
   overflow: hidden;

@@ -563,10 +563,6 @@ export default {
 </script>
 
 <style>
-html, body {
-  font-family: 'Lato', sans-serif;
-  overflow: hidden;
-}
 
 /***************************************** multi screen */
 .column-single {

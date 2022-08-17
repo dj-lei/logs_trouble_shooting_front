@@ -21,8 +21,6 @@ Vue.prototype.$urls = urls
 Vue.prototype.$common = common
 
 import VueRouter from 'vue-router'
-Vue.use(VueRouter)
-
 const router = new VueRouter({
   routes: [
     { path: '/', component: Home },
@@ -30,6 +28,7 @@ const router = new VueRouter({
     { path: '/graphCompare', component: GraphCompare },
   ]
 });
+Vue.use(VueRouter)
 
 new Vue({
   vuetify: new Vuetify(),
