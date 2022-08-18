@@ -2,8 +2,6 @@
 // (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import App from './App'
-import Vuetify from 'vuetify'
-import '@/assets/vuetify.min.css'
 
 import service from '@/plugins/http'
 import urls from '@/plugins/urls'
@@ -14,7 +12,6 @@ import GraphCompare from './components/GraphCompare.vue'
 import Home from './components/Home.vue'
 
 Vue.config.productionTip = false
-Vue.use(Vuetify)
 
 Vue.prototype.$http = service
 Vue.prototype.$urls = urls
@@ -31,7 +28,6 @@ const router = new VueRouter({
 Vue.use(VueRouter)
 
 new Vue({
-  vuetify: new Vuetify(),
   router,
   render: h => h(App)
 }).$mount('#app')
