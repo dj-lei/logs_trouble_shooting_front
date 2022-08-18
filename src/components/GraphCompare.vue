@@ -1,6 +1,6 @@
 <template lang="pug">
   //- div(style="background-color:#000000")
-  div(class="page")
+  div(class="full-height")
     div(id="topnav" class="topnav")
       form(class="form-inline")
         label Process:
@@ -157,9 +157,20 @@ export default {
 }
 </script>
 
-<style>
-body {
-  background: #FFFFFF;
+<style scoped>
+* {
+  box-sizing: border-box;
+}
+
+html,body {
+  font-family: Arial;
+  height: 100%;
+  background: #f1f1f1;
+  margin: 0px 0px 0px 0px;
+}
+
+.full-height {
+  height: 100%;
 }
 
 .topnav {

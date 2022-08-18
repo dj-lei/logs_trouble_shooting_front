@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(style="background-color:#555")
+  div(class="full-height")
     div(id="topnav" class="topnav")
       a(class="index") {{index}}
     div(id="side-nav" class="sidenav")
@@ -563,10 +563,22 @@ export default {
 </script>
 
 <style>
-body {
+* {
+  box-sizing: border-box;
+}
+
+html,body {
+  font-family: Arial;
+  height: 100%;
   background: #555;
   overflow: hidden;
+  margin: 0px 0px 0px 0px;
 }
+
+.full-height {
+  height: 100%;
+}
+
 /***************************************** multi screen */
 .column-single {
   float: left;

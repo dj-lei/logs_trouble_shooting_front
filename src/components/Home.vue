@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(class="row")
+  div(class="row full-height")
     div(class="page-left" style="background-color:#000000;height:100%;")
       h2 Running Log Analysis
       ul(id="running-log" class="running-log")
@@ -181,7 +181,21 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style>
+<style scoped>
+* {
+  box-sizing: border-box;
+}
+
+html,body {
+  font-family: Arial;
+  height: 100%;
+  background: #f1f1f1;
+  margin: 0px 0px 0px 0px;
+}
+
+.full-height {
+  height: 100%;
+}
 .row {
   display: flex;
   height: 100%;
