@@ -27,7 +27,7 @@ export default {
       filterProcess: ['txlProcBranch'],
       filterKey: ['pma', 'pmb', 'txatt'],
       graphHeight: 200,
-      graphWidth: 700,
+      graphWidth: 600,
     } 
   },
 
@@ -158,6 +158,9 @@ export default {
 </script>
 
 <style>
+body {
+  background: #FFFFFF;
+}
 
 .topnav {
   overflow: hidden;

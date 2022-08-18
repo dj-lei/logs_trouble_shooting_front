@@ -456,7 +456,7 @@ export default {
         var element = document.createElement("div")
         element.setAttribute('id', `data${graphIndex}`)
         element.setAttribute('class', "graphs")
-        element.setAttribute('style', "width:750px;height:200px;")
+        element.setAttribute('style', "width:570px;height:200px;")
         document.getElementById('graphs').appendChild(element)
         var chart = echarts.init(document.getElementById(`data${graphIndex}`))
 
@@ -563,7 +563,10 @@ export default {
 </script>
 
 <style>
-
+body {
+  background: #555;
+  overflow: hidden;
+}
 /***************************************** multi screen */
 .column-single {
   float: left;

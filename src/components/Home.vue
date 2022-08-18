@@ -18,25 +18,6 @@
       div(class="split right")
         div(class="groups")
           ul(id="groups2")
-      //- form
-      //-   div(class="row")
-      //-       h2(class="headertekst") TroubleShooting
-      //-   div(class="container")
-      //-     div(class="row")
-      //-       div(class="vl")
-      //-         span(class="vl-innertext") VS
-      //-       div(class="col")
-      //-         input(id="input1" type="text" name="search" placeholder="Search.." required @focus="inputEvent" v-on:keyup="filter")
-      //-         div(id="dropdown" class="dropdown")
-      //-       div(class="col")
-      //-         input(type="text" name="search" placeholder="Search.." disabled)
-      //- div(class="bottom-container")
-      //-   //- router-link(to="logs" style="color:white" class="btn") GO
-      //-   div(class="col")
-      //-     a(style="color:white" class="btn" @click="go") GO
-      //-   div(class="col")
-      //-     a(style="color:white" class="btn" @click="upload") UPLOAD
-      //-     input(id="fileInput" type="file" style="display:none" multiple)
 </template>
 
 <script>
@@ -201,26 +182,27 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style>
-
 .row {
   display: flex;
+  height: 100%;
 }
 
 .page-left {
   flex: 20%;
+  height: 100%;
   border: 1px solid #888;
-  padding: 10px 10px;
+  /* padding: 10px 10px; */
 }
 
 .page-left h2 {
   color: rgb(255, 255, 255);
   text-align: center;
-  padding: 15px 0;
+  padding: 0px 0;
 }
 
 .page-right {
   flex: 80%;
-  padding: 2px;
+  padding: 0px;
 }
 
 .topnav {
@@ -320,8 +302,8 @@ export default {
 }
 
 .loader {
-  border: 16px solid #f3f3f3; /* Light grey */
-  border-top: 16px solid #3498db; /* Blue */
+  border: 8px solid #f3f3f3; /* Light grey */
+  border-top: 8px solid #3498db; /* Blue */
   border-radius: 50%;
   width: 20px;
   height: 20px;
