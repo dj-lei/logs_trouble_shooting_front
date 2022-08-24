@@ -401,26 +401,32 @@ export default {
     },
     openLogDetail(line) {
       var content = document.getElementById('content')
-      Object.keys(this.graphLogData.msg).forEach((num, logIndex) => {
-        var tr = document.createElement("tr")
-        tr.setAttribute('id', `log${logIndex}`)
-        var td = document.createElement("td")
-        td.style.color = "#FFFFFF"
-        Object.keys(this.highlightKeyword).forEach((item) => {
-          item.split(/,/).forEach((key) => {
-            if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
-              if (this.invertedIndexTable[key]['x'].includes(num)){
-                td.style.color = this.highlightKeyword[item]
-              }  
-            }
+      if (!content.hasChildNodes()) {
+        Object.keys(this.graphLogData.msg).forEach((num, logIndex) => {
+          var tr = document.createElement("tr")
+          tr.setAttribute('id', `log${logIndex}`)
+          var td = document.createElement("td")
+          td.style.color = "#FFFFFF"
+          Object.keys(this.highlightKeyword).forEach((item) => {
+            item.split(/,/).forEach((key) => {
+              if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
+                if (this.invertedIndexTable[key]['x'].includes(num)){
+                  td.style.color = this.highlightKeyword[item]
+                }  
+              }
+            })
           })
+          if(logIndex <= line){
+            td.style['background-color'] = "#000080"
+          }
+          td.innerText = this.graphLogData.msg[num]
+          tr.appendChild(td)
+          content.appendChild(tr)
         })
-        td.innerText = this.graphLogData.msg[num]
-        tr.appendChild(td)
-        content.appendChild(tr)
-      })
-      document.getElementById("log-detail").style.width = "50%"
-      document.getElementById("log-detail-navbar").style.display = "block"
+        document.getElementById("log-detail").style.width = "50%"
+        document.getElementById("log-detail-navbar").style.display = "block"
+        this.openGraphDetail()
+      }
       document.getElementById(`log${line-3}`).scrollIntoView(true)
     },
     closeLogDetail() {
@@ -627,7 +633,7 @@ html,body {
 }
 
 .overlay-content {
-  position: relative;
+  /* position: relative; */
   top: 0%;
   width: 100%;
   text-align: left;
@@ -637,9 +643,10 @@ html,body {
 
 .overlay-content .navbar {
   display: none;
+  position: fixed;
+  z-index: 2;
   overflow: hidden;
   background-color: #555; /* Black background color */
-  position: fixed;
   top: 0; /* Stay on top */
   width: 50%; /* Full width */
   /* display: block; */
@@ -674,6 +681,7 @@ html,body {
 
 table {
   /* position: relative; */
+  margin-top: 20px;
   border-collapse: collapse;
   border-spacing: 0;
   width: 100%;
