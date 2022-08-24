@@ -42,6 +42,7 @@
         div(id="tooltip1")
 </template>
 
+<script src="../theme/dark.js"></script>
 <script>
 import * as d3 from 'd3'
 import * as echarts from 'echarts'
@@ -85,12 +86,24 @@ export default {
 
   mounted () {
     let that = this
+    this.$common.setBrowserTitle("Log Trouble Shooting")
+    this.$common.setChartDartTheme(echarts)
     if(this.isDiff == true){
       this.width = document.body.offsetWidth / 2
     }else{
       this.width = document.body.offsetWidth
     }
     this.height = document.body.offsetHeight
+
+    // extract url param 
+    var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
+    this.index = url.get('index')
+    this.process = url.get('process')
+    this.kv = url.get('kv')
+    this.dataIndex = url.get('dataIndex')
+    this.highlightKeyword = JSON.parse(url.get('highlightKeyword'))
+    this.filterGraphs = JSON.parse(url.get('filterKey')) 
+
     document.getElementById("filter-input").value = this.filterGraphs.join(",")
 
     Object.keys(this.highlightKeyword).forEach((key) => {
@@ -122,11 +135,6 @@ export default {
       }
     })
 
-    var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
-    this.index = url.get('index')
-    this.process = url.get('process')
-    this.kv = url.get('kv')
-    this.dataIndex = url.get('dataIndex')
     this.getStoryLines (this.index)
 
     window.onclick = function(event) {
@@ -160,7 +168,7 @@ export default {
           for (var i = 0; i < this.data.length; i++) {
             if(this.data[i]['process'] == this.process){
               this.graphLogData = this.data[i]
-              this.openLogDetail(parseInt(this.graphLogData.kv[this.kv][this.graphLogData.kv[this.kv].length-1][this.dataIndex]))
+              this.openLogDetail(parseInt(this.graphLogData.kv[this.kv][this.graphLogData.kv[this.kv].length-2][this.dataIndex]))
               break
             }
           }
@@ -413,8 +421,6 @@ export default {
       })
       document.getElementById("log-detail").style.width = "50%"
       document.getElementById("log-detail-navbar").style.display = "block"
-      // console.log(div.getBoundingClientRect().top, log.getBoundingClientRect().top)
-      // document.getElementById("log-detail").scrollTo({top: log.getBoundingClientRect().top, behavior: 'smooth'})
       document.getElementById(`log${line-3}`).scrollIntoView(true)
     },
     closeLogDetail() {
@@ -427,7 +433,6 @@ export default {
       this.closeGraphDetail()
     },
     scrollLogDetail(){
-      /* When the user scrolls down, hide the navbar. When the user scrolls up, show the navbar */
       var div = document.getElementById("log-detail")
       var currentScrollPos = div.scrollTop;
 
@@ -446,7 +451,8 @@ export default {
       Object.keys(this.graphLogData.kv).forEach((item) => {
         this.filterGraphs.forEach((key) => {
           if (item.toLowerCase().includes(key.toLowerCase())) {
-            graphs.push([item, this.graphLogData.kv[item].slice(0, this.graphLogData.kv[item].length - 1)])
+            var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable, Object.keys(this.graphLogData.msg), this.graphLogData.kv[item][this.graphLogData.kv[item].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
+            graphs.push([item, this.graphLogData.kv[item].slice(0, this.graphLogData.kv[item].length - 2), markLine])
           }
         })
       })
@@ -456,9 +462,9 @@ export default {
         var element = document.createElement("div")
         element.setAttribute('id', `data${graphIndex}`)
         element.setAttribute('class', "graphs")
-        element.setAttribute('style', "width:570px;height:200px;")
+        element.setAttribute('style', "width:550px;height:200px;")
         document.getElementById('graphs').appendChild(element)
-        var chart = echarts.init(document.getElementById(`data${graphIndex}`))
+        var chart = echarts.init(document.getElementById(`data${graphIndex}`), 'dark')
 
         option['title']['text'] = graph[0]
         option['series'] = []
@@ -470,7 +476,8 @@ export default {
               name: `${graph[0]}_${lineIndex}`,
               type: 'line',
               showSymbol: false,
-              data: data.map(i => parseFloat(i))
+              data: data.map(i => parseFloat(i)),
+              markLine: graph[2]
             }
           )
         })
@@ -482,9 +489,11 @@ export default {
         option['xAxis']['data'] = list
         chart.setOption(option)
         chart.on('click', function(params) {
-          var name = params['seriesName'].split(/_/)
-          name = name.slice(0, name.length - 1).join("_")
-          that.openLogDetail(parseInt(that.graphLogData.kv[name][that.graphLogData.kv[name].length-1][params['dataIndex']]))
+          if(params['componentType'] != 'markLine'){
+            var name = params['seriesName'].split(/_/)
+            name = name.slice(0, name.length - 1).join("_")
+            that.openLogDetail(parseInt(that.graphLogData.kv[name][that.graphLogData.kv[name].length-2][params['dataIndex']]))
+          }
         });
       })
       document.getElementById("graph-detail").style.left = "60%"
@@ -612,7 +621,7 @@ html,body {
   z-index: 1;
   top: 0;
   left: 0;
-  background-color: rgb(255, 255, 255,0.9);
+  background-color: rgb(0, 0, 0);
   overflow-x: scroll;
   transition: 0.5s;
 }

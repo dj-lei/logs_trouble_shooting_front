@@ -35,6 +35,7 @@ export default {
   },
   mounted () {
     let that = this
+    this.$common.setBrowserTitle("Home")
     this.getIndices()
     this.scheduled()
     document.getElementById('fileInput').onchange = function () {
@@ -181,7 +182,7 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
+<style>
 * {
   box-sizing: border-box;
 }
