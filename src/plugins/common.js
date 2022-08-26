@@ -19,6 +19,7 @@ export default {
        }
        return theRequest
     },
+
     getTime (time_stamp) {
       let yy = new Date().getFullYear();
       let mm = new Date().getMonth()+1;
@@ -28,6 +29,7 @@ export default {
       let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
       return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
     },
+
     getTimeHour (time_stamp) {
       // let yy = new Date().getFullYear();
       // let mm = new Date().getMonth()+1;
@@ -37,6 +39,7 @@ export default {
       let ss = new Date(time_stamp).getSeconds()<10 ? '0'+new Date(time_stamp).getSeconds() : new Date(time_stamp).getSeconds();
       return hh+':'+mf+':'+ss
     },
+
     colorRGBtoHex(color) {
       var rgb = color.split(',')
       var r = parseInt(rgb[0].split('(')[1])
@@ -45,9 +48,11 @@ export default {
       var hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
       return hex
     },
+
     setBrowserTitle(val){
       document.title = val
     },
+
     generateUUID() {
       var d = new Date().getTime()
       var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -184,6 +189,7 @@ export default {
       theme.categoryAxis.splitLine.show = false;
       echarts.registerTheme('dark', theme);
     },
+
     getChartConfig(){
       return {
         title: {
@@ -290,6 +296,16 @@ export default {
         })
       })
       return res
+    },
+
+    startLoading(){
+      var loadingOverlay = document.querySelector('.loading');
+      loadingOverlay.classList.remove('hidden');
+    },
+    
+    stopLoading(){
+      var loadingOverlay = document.querySelector('.loading');
+      loadingOverlay.classList.add('hidden');
     },
 }
 

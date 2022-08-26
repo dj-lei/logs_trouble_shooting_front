@@ -1,5 +1,4 @@
 <template lang="pug">
-  //- div(style="background-color:#000000")
   div(class="full-height")
     div(id="topnav" class="topnav")
       form(class="form-inline")
@@ -18,6 +17,9 @@
           span(class="addBtn" @click="newHighlightItem") Add
         ul(id="highlight-list" style="list-style: none;")
     div(id="graphs" class="graphs")
+    div(class="loading hidden")
+      div(class='uil-ring-css' style='transform:scale(0.79);')
+        div
 </template>
 
 <script>
@@ -45,8 +47,10 @@ export default {
   },
 
   mounted () {
+    this.$common.startLoading()
+
     let that = this
-    this.$common.setBrowserTitle("Graph Compare")
+    this.$common.setBrowserTitle("Compare View")
     this.$common.setChartDartTheme(echarts)
     document.getElementById("process").value = this.filterProcess.join(",")
     document.getElementById("keywords").value = this.filterKey.join(",")
@@ -99,6 +103,7 @@ export default {
           this.originIndex = response.data.origin_index
           this.invertedIndexTable = response.data.inverted_index_table
           this.createGraph()
+          this.$common.stopLoading()
         })
     },
     createGraph () {
@@ -480,5 +485,63 @@ ul li:hover {
 .close-list:hover {
   background-color: #f44336;
   color: white;
+}
+
+/***************************************** full screen loading css */
+.hidden {
+  display: none !important;
+}
+
+div.loading{
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(16, 16, 16, 0.5);
+}
+
+@keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+.uil-ring-css {
+  margin: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
+}
+.uil-ring-css > div {
+  position: absolute;
+  display: block;
+  width: 160px;
+  height: 160px;
+  top: 20px;
+  left: 20px;
+  border-radius: 80px;
+  box-shadow: 0 6px 0 0 #ffffff;
+  -ms-animation: uil-ring-anim 1s linear infinite;
+  -moz-animation: uil-ring-anim 1s linear infinite;
+  -webkit-animation: uil-ring-anim 1s linear infinite;
+  -o-animation: uil-ring-anim 1s linear infinite;
+  animation: uil-ring-anim 1s linear infinite;
 }
 </style>

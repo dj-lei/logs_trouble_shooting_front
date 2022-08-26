@@ -9,7 +9,7 @@
     div(class="page-right")
       div(id="topnav" class="topnav")
         a(@click="go") GO
-        a(@click="upload") UPLOAD
+        a(@click="openUploadModal") UPLOAD
         input(id="fileInput" type="file" style="display:none" multiple)
       div(class="split left")
         input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
@@ -18,6 +18,26 @@
       div(class="split right")
         div(class="groups")
           ul(id="groups2")
+        div(id="highlight-modal" class="modal")
+    div(id="upload-modal" class="modal")
+      div(class="modal-content")
+          div(class="modal-header")
+            h2 Log Prefix & Upload
+            form
+              label Platform: 
+              input(type="text" id="platform" placeholder="visby oslo or ...")
+              label Product: 
+              input(type="text" id="product" placeholder="6626 4485 or ...")
+              label Category: 
+              input(type="text" id="category" placeholder="lab or customer")
+              label UniqueId: 
+              input(type="text" id="uniqueid" placeholder="Unique identification")
+          div(class="modal-footer")
+            button(id="submit" class="button" @click="submit" disabled) Submit
+            button(id="select" class="button" @click="select") Select
+    div(class="loading hidden")
+      div(class='uil-ring-css' style='transform:scale(0.79);')
+        div
 </template>
 
 <script>
@@ -27,6 +47,15 @@ export default {
     return {
       indices: [],
       queue: [],
+
+      platform: '',
+      // platformList: ['visby', 'oslo'],
+      product: '',
+      // ProductList: ['6626', '4485'],
+      category: '',
+      // ProductList: ['lab', 'customer'],
+      uniqueid: '',
+
       interval: '',
       refresh_interval: 5000,
       errorInfo: '',
@@ -34,13 +63,19 @@ export default {
     }
   },
   mounted () {
-    let that = this
+    // let that = this
     this.$common.setBrowserTitle("Home")
     this.getIndices()
     this.scheduled()
     document.getElementById('fileInput').onchange = function () {
-      that.postFile()
+      document.getElementById('submit').disabled = false
     };
+
+    window.onclick = function(event) {
+      if (event.target == document.getElementById("upload-modal")) {
+        document.getElementById("upload-modal").style.display = "none";
+      }
+    }
   },
   methods: {
     scheduled(){
@@ -58,7 +93,7 @@ export default {
         })
         .then(response => {
           this.queue = response.data.content
-          this.clearChildDoms('running-log')
+          this.$common.removeAllChildDom('running-log')
           this.createRuningIndices()
         })
     },
@@ -71,19 +106,13 @@ export default {
         .then(response => {
           if(this.indices.length != response.data.content.length){
             this.indices = response.data.content
-            this.clearChildDoms('groups1')
+            this.$common.removeAllChildDom('groups1')
             this.createDropDown()
           }
         })
     },
-    clearChildDoms(id){
-      var content = document.getElementById(id)
-      while (content.firstChild) {
-        content.removeChild(content.lastChild);
-      }
-    },
     createRuningIndices () {
-      Object.keys(this.queue).forEach((index) => {
+      this.queue.forEach((index) => {
         var div = document.createElement("div")
         div.setAttribute('class', 'loader')
         var a = document.createElement("a")
@@ -124,15 +153,45 @@ export default {
         document.getElementById('groups1').appendChild(elementLeft)
       })
     },
-    upload(){
+    filter(){
+      var input, filter, div, a, i, txtValue;
+      input = document.getElementById("input1");
+      filter = input.value.toUpperCase();
+      div = document.getElementById("groups1");
+      a = div.getElementsByTagName("li");
+      for (i = 0; i < a.length; i++) {
+        txtValue = a[i].textContent || a[i].innerText;
+        if (txtValue.toUpperCase().indexOf(filter) > -1) {
+          a[i].style.display = "";
+        } else {
+          a[i].style.display = "none";
+        }
+      }
+    },
+    openUploadModal(){
+      var modal = document.getElementById("upload-modal")
+      modal.style.display = "block"
+    },
+    closeUploadModal(){
+      var modal = document.getElementById("upload-modal")
+      modal.style.display = "none"
+      document.getElementById('submit').disabled = true
+      
+    },
+    select(){
       document.getElementById('fileInput').click()
     },
-    async postFile(){
+    async submit(){
+      this.$common.startLoading()
       let formData = new FormData()
       let files = document.getElementById("fileInput").files;
       for (let file of files){
         formData.append("file[]", file);
       }
+      formData.append("platform", document.getElementById("platform").value);
+      formData.append("product", document.getElementById("product").value);
+      formData.append("category", document.getElementById("category").value);
+      formData.append("uniqueid", document.getElementById("uniqueid").value);
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -141,7 +200,9 @@ export default {
 
       await this.$http.post(this.$urls.send_file, formData, config).then(
         (response)=>{
-        
+        this.$common.stopLoading()
+        document.getElementById('submit').disabled = false
+        document.getElementById("upload-modal").style.display = "none";
       }, (error) => {
         this.errorInfo = 'Wrong file format or Too large!'
         this.errorShown = true
@@ -161,21 +222,6 @@ export default {
       let routeData = this.$router.resolve({path: '/graphCompare', query:{index: params.join(",")}});
       window.open(routeData.href, '_blank');
     },
-    filter(){
-      var input, filter, div, a, i, txtValue;
-      input = document.getElementById("input1");
-      filter = input.value.toUpperCase();
-      div = document.getElementById("groups1");
-      a = div.getElementsByTagName("li");
-      for (i = 0; i < a.length; i++) {
-        txtValue = a[i].textContent || a[i].innerText;
-        if (txtValue.toUpperCase().indexOf(filter) > -1) {
-          a[i].style.display = "";
-        } else {
-          a[i].style.display = "none";
-        }
-      }
-    }
   }
 
 }
@@ -205,6 +251,7 @@ html,body {
 .page-left {
   flex: 20%;
   height: 100%;
+  color: rgb(255, 255, 255);
   border: 1px solid #888;
   /* padding: 10px 10px; */
 }
@@ -340,24 +387,140 @@ html,body {
   color: white;
 }
 
-/* vertical line */
-.vl {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%);
-  border: 2px solid #ddd;
+/***************************************** log prefix & upload modal css */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+}
+
+/* Modal Content */
+.modal-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: 5% auto;
+  /* padding: 20px; */
+  border: 1px solid #888;
+  width: 55%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
+/* Modal Header */
+.modal-header {
+  padding: 50px 50px;
+  background-color: #FFCC00;
+  font-size: 25px; /* Increase font size */
+  text-align: center;
+  color: white;
+}
+
+/* Style the input */
+.modal-header label {
+  float: left;
+  font-size: 15px;
+}
+.modal-header input {
+  float: left;
+  border: none;
+  border-radius: 0;
+  width: 15%;
+  padding: 5px;
+  font-size: 10px;
+  background-color: white;
+}
+
+.modal-footer {
+  padding: 0px 0px 0px 0px;
+  background-color: #333;
+  color: white;
+}
+
+/* Style the "Add" button */
+.modal-footer .button {
+  padding: 5px;
+  width: 50%;
+  background: #d9d9d9;
+  color: #ffffff;
+  text-align: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 0;
+}
+.modal-footer .button:hover {
+  background-color: #bbb;
+}
+
+/* Modal Body */
+/* .modal-body {padding: 2px 16px;} */
+
+/* Add Animation */
+@keyframes animatetop {
+  from {top: -300px; opacity: 0}
+  to {top: 0; opacity: 1}
+}
+
+/***************************************** full screen loading css */
+.hidden {
+  display: none !important;
+}
+
+div.loading{
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
+  background-color: rgba(16, 16, 16, 0.5);
 }
 
-/* text inside the vertical line */
-.vl-innertext {
+@keyframes uil-ring-anim {
+  0% {
+    -ms-transform: rotate(0deg);
+    -moz-transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -o-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    -ms-transform: rotate(360deg);
+    -moz-transform: rotate(360deg);
+    -webkit-transform: rotate(360deg);
+    -o-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+.uil-ring-css {
+  margin: auto;
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background-color: #f1f1f1;
-  border: 1px solid #ccc;
-  border-radius: 50%;
-  padding: 8px 10px;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  width: 200px;
+  height: 200px;
 }
-
+.uil-ring-css > div {
+  position: absolute;
+  display: block;
+  width: 160px;
+  height: 160px;
+  top: 20px;
+  left: 20px;
+  border-radius: 80px;
+  box-shadow: 0 6px 0 0 #ffffff;
+  -ms-animation: uil-ring-anim 1s linear infinite;
+  -moz-animation: uil-ring-anim 1s linear infinite;
+  -webkit-animation: uil-ring-anim 1s linear infinite;
+  -o-animation: uil-ring-anim 1s linear infinite;
+  animation: uil-ring-anim 1s linear infinite;
+}
 </style>
