@@ -18,7 +18,7 @@ export default {
 html,body {
   font-family: Arial;
   height: 100%;
-  background: #f1f1f1;
+  background: #555;
   margin: 0px 0px 0px 0px;
 }
 

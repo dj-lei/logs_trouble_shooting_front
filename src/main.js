@@ -7,8 +7,8 @@ import service from '@/plugins/http'
 import urls from '@/plugins/urls'
 import common from '@/plugins/common'
 
-import LogsTroubleShooting from './components/LogsTroubleShooting.vue'
-import GraphCompare from './components/GraphCompare.vue'
+import LogicView from './components/LogicView.vue'
+import CompareView from './components/CompareView.vue'
 import Home from './components/Home.vue'
 
 Vue.config.productionTip = false
@@ -21,8 +21,8 @@ import VueRouter from 'vue-router'
 const router = new VueRouter({
   routes: [
     { path: '/', component: Home },
-    { path: '/logs', component: LogsTroubleShooting },
-    { path: '/graphCompare', component: GraphCompare },
+    { path: '/logicview', component: LogicView },
+    { path: '/compareview', component: CompareView },
   ]
 });
 Vue.use(VueRouter)

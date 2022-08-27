@@ -1,6 +1,6 @@
 <template lang="pug">
   div(class="full-height")
-    div(id="topnav" class="topnav")
+    div(id="topnav" class="logic-view-topnav")
       a(class="index") {{index}}
     div(id="side-nav" class="sidenav")
       a(id="highlight" @click="openHighlightModal") Highlight
@@ -593,8 +593,8 @@ html,body {
   font-family: Arial;
   height: 100%;
   background: #555;
-  overflow: hidden;
   margin: 0px 0px 0px 0px;
+  overflow: hidden !important;
 }
 
 .full-height {
@@ -710,12 +710,12 @@ th, td {
 }
 
 /***************************************** top nav css */
-.topnav {
+.logic-view-topnav {
   overflow: hidden;
   background-color: #333;
 }
 
-.topnav .index {
+.logic-view-topnav .index {
   float: right;
   color: #f2f2f2;
   text-align: center;
@@ -724,7 +724,7 @@ th, td {
   font-size: 17px;
 }
 
-.topnav .dev {
+.logic-view-topnav .dev {
   float: left;
   color: #f2f2f2;
   text-align: center;
@@ -733,12 +733,12 @@ th, td {
   font-size: 17px;
 }
 
-.topnav .dev:hover {
+.logic-view-topnav .dev:hover {
   background-color: #ddd;
   color: black;
 }
 
-.topnav .dev.active {
+.logic-view-topnav .dev.active {
   background-color: #04AA6D;
   color: white;
 }
@@ -900,63 +900,4 @@ ul li:hover {
   background-color: #f44336;
   color: white;
 }
-
-/***************************************** full screen loading css */
-.hidden {
-  display: none !important;
-}
-
-div.loading{
-  position: fixed;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(16, 16, 16, 0.5);
-}
-
-@keyframes uil-ring-anim {
-  0% {
-    -ms-transform: rotate(0deg);
-    -moz-transform: rotate(0deg);
-    -webkit-transform: rotate(0deg);
-    -o-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-  100% {
-    -ms-transform: rotate(360deg);
-    -moz-transform: rotate(360deg);
-    -webkit-transform: rotate(360deg);
-    -o-transform: rotate(360deg);
-    transform: rotate(360deg);
-  }
-}
-
-.uil-ring-css {
-  margin: auto;
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  width: 200px;
-  height: 200px;
-}
-.uil-ring-css > div {
-  position: absolute;
-  display: block;
-  width: 160px;
-  height: 160px;
-  top: 20px;
-  left: 20px;
-  border-radius: 80px;
-  box-shadow: 0 6px 0 0 #ffffff;
-  -ms-animation: uil-ring-anim 1s linear infinite;
-  -moz-animation: uil-ring-anim 1s linear infinite;
-  -webkit-animation: uil-ring-anim 1s linear infinite;
-  -o-animation: uil-ring-anim 1s linear infinite;
-  animation: uil-ring-anim 1s linear infinite;
-}
-
 </style>

@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(class="row full-height")
+  div(class="home-row full-height")
     div(class="page-left" style="background-color:#000000;height:100%;")
       h2 Running Log Analysis
       ul(id="running-log" class="running-log")
@@ -7,7 +7,7 @@
         //-   a lte_ciasihan_bgr_gh_bxp_2053_telog
         //-     div(class="loader")
     div(class="page-right")
-      div(id="topnav" class="topnav")
+      div(id="topnav" class="home-topnav")
         a(@click="go") GO
         a(@click="openUploadModal") UPLOAD
         input(id="fileInput" type="file" style="display:none" multiple)
@@ -219,7 +219,7 @@ export default {
       for (i = 0; i < li.length; i++) {
         params.push(li[i].innerText.split(/\n/)[0])
       }
-      let routeData = this.$router.resolve({path: '/graphCompare', query:{index: params.join(",")}});
+      let routeData = this.$router.resolve({path: '/compareview', query:{index: params.join(",")}});
       window.open(routeData.href, '_blank');
     },
   }
@@ -236,14 +236,14 @@ export default {
 html,body {
   font-family: Arial;
   height: 100%;
-  background: #f1f1f1;
+  background: #555;
   margin: 0px 0px 0px 0px;
 }
 
 .full-height {
   height: 100%;
 }
-.row {
+.home-row {
   display: flex;
   height: 100%;
 }
@@ -267,13 +267,13 @@ html,body {
   padding: 0px;
 }
 
-.topnav {
+.home-topnav {
   width: 100%; /* Full-width */
   background-color: #333; /* Dark-grey background */
   overflow: hidden; /* Overflow due to float */
 }
 
-.topnav a {
+.home-topnav a {
   text-align: center; /* Center-align text */
   float: left;
   width: 50%; /* Equal width (5 icons with 20% width each = 100%) */
@@ -282,7 +282,7 @@ html,body {
   border: 1px solid black;
 }
 
-.topnav a:hover {
+.home-topnav a:hover {
   background-color: #000; /* Add a hover color */
 }
 
@@ -331,7 +331,8 @@ html,body {
   border: 1px solid #ddd; /* Add a thin border to each list item */
   margin-top: -1px; /* Prevent double borders */
   background-color: #f6f6f6; /* Add a grey background color */
-  padding: 12px; /* Add some padding */
+  padding: 12px !important; /* Add some padding */
+  font-size: 12px !important;
 }
 
 .groups ul li:hover,
@@ -346,6 +347,10 @@ html,body {
   list-style-type: none;
   padding: 0;
   margin-left: 10;
+}
+
+.running-log li{
+  background-color: #000 !important;
 }
 
 .running-log li a {
