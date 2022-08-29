@@ -1,9 +1,9 @@
 # build stage
 FROM node:lts-alpine as build-stage
 
-# ENV http_proxy "http://100.98.146.3:8080"
-# ENV https_proxy "http://100.98.146.3:8080"
-# ENV ftp_proxy "http://100.98.146.3:8080"
+ENV http_proxy "http://100.98.146.3:8080"
+ENV https_proxy "http://100.98.146.3:8080"
+ENV ftp_proxy "http://100.98.146.3:8080"
 
 RUN mkdir -p /app
 
