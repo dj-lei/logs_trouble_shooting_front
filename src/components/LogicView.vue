@@ -599,6 +599,7 @@ html,body {
 
 .full-height {
   height: 100%;
+  overflow: hidden !important;
 }
 
 /***************************************** multi screen */
