@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(class="full-height")
+  div(class="logic-view-full-height")
     div(id="topnav" class="logic-view-topnav")
       a(class="index") {{index}}
     div(id="side-nav" class="sidenav")
@@ -597,7 +597,7 @@ html,body {
   overflow: hidden !important;
 }
 
-.full-height {
+.logic-view-full-height {
   height: 100%;
   overflow: hidden !important;
 }

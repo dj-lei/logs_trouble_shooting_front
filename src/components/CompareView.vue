@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(class="full-height")
+  div(class="compare-view-full-height")
     div(id="topnav" class="compare-view-topnav")
       form(class="form-inline")
         label Process:
@@ -285,7 +285,7 @@ html,body {
   overflow: auto !important;
 }
 
-.full-height {
+.compare-view-full-height {
   position: sticky !important;
   height: 100%;
   /* overflow-y: hidden !important; */
