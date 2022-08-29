@@ -2,9 +2,9 @@
   div(class="compare-view-full-height")
     div(id="topnav" class="compare-view-topnav")
       form(class="form-inline")
-        label Process:
+        label FilterProcess:
         input(id="process" type="text")
-        label Keywords:
+        label FilterKeywords:
         input(id="keywords" type="text")
         a(class="go" @click="go") GO
         a(class="func" @click="openHighlightModal") Highlight
@@ -122,9 +122,9 @@ export default {
                       }
                       var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
                       if (!graphs[process].hasOwnProperty(kv)){
-                        graphs[process][kv] = [[index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 1), markLine]]
+                        graphs[process][kv] = [[index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine]]
                       }else{
-                        graphs[process][kv].push([index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 1), markLine])
+                        graphs[process][kv].push([index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine])
                       }
                     }
                   })
@@ -157,10 +157,12 @@ export default {
           var pack = {}
           graphs[process][kv].forEach((item) => {
             item[2].forEach((data, index) => {
-              if (!pack.hasOwnProperty(`${index}`)){
-                pack[`${index}`] = []
+              if(index < item[2].length - 1){ // filter timestamp
+                if (!pack.hasOwnProperty(`${index}`)){
+                  pack[`${index}`] = []
+                }
+                pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1]])
               }
-              pack[`${index}`].push([item[0], data, item[3]])
             })
           })
 
@@ -176,7 +178,6 @@ export default {
             option['series'] = []
             var legend = []
             var count = []
-
             pack[item].forEach((line) => {
               legend.push(`${line[0]}`)
               count.push(line[1].length)
@@ -186,7 +187,7 @@ export default {
                   name: `${line[0]}`,
                   type: 'line',
                   showSymbol: false,
-                  data: line[1].map(i => parseFloat(i)),
+                  data: line[1].map((v, i) => ({'value': parseFloat(v), 'timestamp': line[3][i]})),
                   markLine: line[2]
                 }
               )

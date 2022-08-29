@@ -16,7 +16,7 @@
     div(id="filter-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
-          h2 Filter Graph
+          h2 Filter Keywords Graph
           input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
           //- v-on:scroll="scrollLogDetail"
     div(id="log-detail" class="overlay")
@@ -81,6 +81,9 @@ export default {
       allInvertedIndexTable:{},
       width: 1000,
       height: 1200,
+
+      graphHeight: 200,
+      graphWidth: 550,
 
       yAxis:'',
       xAxis:'',
@@ -475,7 +478,7 @@ export default {
         var element = document.createElement("div")
         element.setAttribute('id', `data${graphIndex}`)
         element.setAttribute('class', "graphs")
-        element.setAttribute('style', "width:550px;height:200px;")
+        element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
         document.getElementById('graphs').appendChild(element)
         var chart = echarts.init(document.getElementById(`data${graphIndex}`), 'dark')
 
@@ -483,16 +486,18 @@ export default {
         option['series'] = []
         var legend = []
         graph[1].forEach((data, lineIndex) => {
-          legend.push(`${graph[0]}_${lineIndex}`)
-          option['series'].push(
-            {
-              name: `${graph[0]}_${lineIndex}`,
-              type: 'line',
-              showSymbol: false,
-              data: data.map(i => parseFloat(i)),
-              markLine: graph[2]
-            }
-          )
+          if(lineIndex < graph[1].length - 1){ // filter timestamp
+            legend.push(`${graph[0]}_${lineIndex}`)
+            option['series'].push(
+              {
+                name: `${graph[0]}_${lineIndex}`,
+                type: 'line',
+                showSymbol: false,
+                data: data.map((v, i) => ({'value': parseFloat(v), 'timestamp': graph[1][graph[1].length-1][i]})),
+                markLine: graph[2]
+              }
+            )
+          }
         })
         var list = [];
         for (var i = 0; i < option['series'][0]['data'].length; i++) {
@@ -509,8 +514,8 @@ export default {
           }
         });
       })
-      document.getElementById("graph-detail").style.left = "60%"
-      document.getElementById("graph-detail").style.width = "40%"
+      document.getElementById("graph-detail").style.left = `${100 -parseInt(this.graphWidth / this.width * 100)}%`
+      document.getElementById("graph-detail").style.width = `${parseInt(this.graphWidth / this.width * 100)}%`
     },
     closeGraphDetail() {
       var content = document.getElementById('graphs')
@@ -518,9 +523,6 @@ export default {
         content.removeChild(content.lastChild);
       }
       document.getElementById("graph-detail").style.width = "0%";
-    },
-    openDevice(){
-
     },
     openHighlightModal(){
       var modal = document.getElementById("highlight-modal")

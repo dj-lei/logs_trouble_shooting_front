@@ -203,7 +203,7 @@ export default {
           formatter: (params) => {
             var ret = ''
             params.forEach((param) => {
-              ret = ret + param.marker + "Value:" + param.value + '<br/>'         
+              ret = ret + param.marker + param.data.timestamp + ":" + param.data.value + '<br/>'         
             })
             return ret;
           },
