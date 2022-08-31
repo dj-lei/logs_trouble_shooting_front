@@ -166,46 +166,56 @@ export default {
 
           var items = Object.keys(pack).sort()
           items.forEach((item, index) => {
-            var graph = document.createElement("div")
-            graph.setAttribute('id', `${process}${kv}${index}`)
-            graph.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-            graphRow.appendChild(graph)
+            if(index < items.length - 1){
+              var graph = document.createElement("div")
+              graph.setAttribute('id', `${process}${kv}${index}`)
+              graph.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
+              graphRow.appendChild(graph)
 
-            var chart = echarts.init(document.getElementById(`${process}${kv}${index}`), 'dark')
-            option['title']['text'] = `${kv}_${index}`
-            option['series'] = []
-            var legend = []
-            var count = []
-
-            pack[item].forEach((line) => {
-              legend.push(`${line[0]}`)
-              count.push(line[1].length)
-              // console.log(line[2]['data'].length > 0 ? line[2]['data'] : '')
-              option['series'].push(
-                {
-                  name: `${line[0]}`,
-                  type: 'line',
-                  showSymbol: false,
-                  data: line[1].map(i => parseFloat(i)),
-                  markLine: line[2]
-                }
-              )
-            })
-
-            var list = [];
-            for (var i = 0; i < Math.max.apply(Math, count); i++) {
-              list.push(i);
-            }
-            option['legend']['data'] = legend
-            option['xAxis']['data'] = list
-            chart.setOption(option)
-            chart.on('click', function(params) {
-              // console.log(params)
-              if(params['componentType'] != 'markLine'){
-                let routeData = that.$router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(that.highlightKeyword), filterKey:JSON.stringify(that.filterKey)}});
-                window.open(routeData.href, '_blank');
+              var chart = echarts.init(document.getElementById(`${process}${kv}${index}`), 'dark')
+              option['title']['text'] = `${kv}_${index}`
+              option['series'] = []
+              option['tooltip']['formatter'] = function(params){
+                var ret = ''
+                params.forEach((param) => {
+                  if(param['seriesName'] != 'highlight'){
+                    ret = ret + param.marker +"value:" + param.value+ '<br/>'
+                  }
+                })
+                return ret;
               }
-            });
+              var legend = []
+              var count = []
+              pack[item].forEach((line) => {
+                legend.push(`${line[0]}`)
+                count.push(line[1].length)
+                // console.log(line[2]['data'].length > 0 ? line[2]['data'] : '')
+                option['series'].push(
+                  {
+                    name: `${line[0]}`,
+                    type: 'line',
+                    showSymbol: false,
+                    data: line[1].map(i => parseFloat(i)),
+                    markLine: line[2]
+                  }
+                )
+              })
+
+              var list = [];
+              for (var i = 0; i < Math.max.apply(Math, count); i++) {
+                list.push(i);
+              }
+              option['legend']['data'] = legend
+              option['xAxis']['data'] = list
+              chart.setOption(option)
+              chart.on('click', function(params) {
+                // console.log(params)
+                if(params['componentType'] != 'markLine'){
+                  let routeData = that.$router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(that.highlightKeyword), filterKey:JSON.stringify(that.filterKey)}});
+                  window.open(routeData.href, '_blank');
+                }
+              });
+            }
           })
         })
       })

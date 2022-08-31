@@ -84,6 +84,9 @@ export default {
 
       yAxis:'',
       xAxis:'',
+
+      graphHeight: 800,
+      graphWidth: 1000,
     }
   },
 
@@ -99,6 +102,7 @@ export default {
       this.width = document.body.offsetWidth
     }
     this.height = document.body.offsetHeight
+    this.graphHeight = document.body.offsetHeight - 20
 
     // extract url param 
     var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
@@ -432,7 +436,7 @@ export default {
         })
         document.getElementById("log-detail").style.width = "50%"
         document.getElementById("log-detail-navbar").style.display = "block"
-        this.openGraphDetail()
+        this.openSequentialGraphDetail()
       }
       document.getElementById(`log${line-3}`).scrollIntoView(true)
     },
@@ -455,6 +459,105 @@ export default {
         document.getElementById("log-detail-navbar").style.top = "-50px";
       }
       this.prevScrollpos = currentScrollPos;
+    },
+    openSequentialGraphDetail() {
+      let that = this
+      this.$common.removeAllChildDom("graphs")
+
+      var graphs = []
+      Object.keys(this.graphLogData.kv).forEach((item) => {
+        this.filterGraphs.forEach((key) => {
+          if (item.toLowerCase().includes(key.toLowerCase())) {
+            graphs.push([item, this.graphLogData.kv[item].slice(0, this.graphLogData.kv[item].length - 1)])
+          }
+        })
+      })
+      
+      var makeLineAxis = []
+      var markLine = {
+        symbol: 'none',
+        label:{
+          // color:'#FFFFFF',
+          fontSize:12,
+        },
+        lineStyle:{
+          type:'dotted',
+          width: 2
+        },
+        data:[]
+      }
+      Object.keys(this.highlightKeyword).forEach((item) => {
+        item.split(/,/).forEach((key) => {
+          if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase()))
+          {
+            var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key]['x'], Object.keys(this.graphLogData.msg))
+            if (intersec.length > 0){
+              intersec.forEach((elm) => {
+                var pos = d3.bisect(Object.keys(this.graphLogData.msg).map(v => {return parseInt(v)}), parseInt(elm));
+                markLine['data'].push({'xAxis': pos, 'label': {'color': this.highlightKeyword[item], 'formatter':key, 'fontSize':10}})
+                makeLineAxis.push({'value':[pos,0]})
+              })
+            }
+          }
+        })
+      })
+      
+      var option = this.$common.getChartConfig()
+      var element = document.createElement("div")
+      element.setAttribute('id', "Sequential")
+      element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
+      document.getElementById('graphs').appendChild(element)
+      var chart = echarts.init(document.getElementById("Sequential"), 'dark')
+
+      option['title']['text'] = "Sequential"
+      option['series'] = []
+      var legend = []
+      var unselect = {}
+      graphs.forEach((data) => {
+        data[1].forEach((items, index) => {
+          if(index < data[1].length-1){
+            var d = []
+            var normalize = this.$common.normalize(items.map((v) => parseFloat(v)), 100)
+            items.forEach((item, i) => {
+              d.push({'value': [parseInt(data[1][data[1].length-1][i]), normalize[i][0]], 'origin':normalize[i][1]})
+            })
+            legend.push(`${data[0]}_${index}`)
+            unselect[`${data[0]}_${index}`] = false
+            option['series'].push(
+              {
+                name: `${data[0]}_${index}`,
+                type: 'line',
+                showSymbol: false,
+                data: d,
+              }
+            )
+          }
+        })
+      })
+
+      legend.push("highlight")
+      option['series'].push(
+        {
+          name: "highlight",
+          type: 'line',
+          showSymbol: false,
+          data: makeLineAxis,
+          markLine: markLine
+        }
+      )
+      option['legend']['selected'] = unselect
+      option['legend']['data'] = legend
+      option['xAxis']['type'] = 'value'
+      option['yAxis']['type'] = 'value'
+      chart.setOption(option)
+      chart.on('click', function(params) {
+        if(params['componentType'] != 'markLine'){
+          that.openLogDetail(params.data.value[0])
+        }
+      });
+
+      document.getElementById("graph-detail").style.left = "50%"
+      document.getElementById("graph-detail").style.width = "50%"
     },
     openGraphDetail() {
       let that = this
@@ -698,7 +801,7 @@ table {
 th, td {
   white-space: nowrap;
   text-align: left;
-  border: 1px solid black;
+  border: 1px solid rgb(255, 255, 255);
 }
 
 /* tr:nth-child(even) {

@@ -63,6 +63,17 @@ export default {
       return 'a'+uuid
     },
 
+    normalize(numbers, range){
+      var res = []
+      var ratio = Math.max.apply(Math, numbers) / range
+      var l = numbers.length
+
+      for (var i = 0; i < l; i++) {
+        res.push([numbers[i] / ratio, numbers[i]])
+      }
+      return res
+    },
+
     setChartDartTheme(echarts){
       var contrastColor = '#eee';
       var axisCommon = function () {
@@ -203,9 +214,12 @@ export default {
           formatter: (params) => {
             var ret = ''
             params.forEach((param) => {
-              ret = ret + param.marker + "Value:" + param.value + '<br/>'         
+              if(param['seriesName'] != 'highlight'){
+                ret = ret + param.marker + param.seriesName +":" + param.data['origin'] + '<br/>'
+              }
             })
             return ret;
+            
           },
           feature: {
             saveAsImage: {

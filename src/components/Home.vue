@@ -48,14 +48,6 @@ export default {
       indices: [],
       queue: [],
 
-      platform: '',
-      // platformList: ['visby', 'oslo'],
-      product: '',
-      // ProductList: ['6626', '4485'],
-      category: '',
-      // ProductList: ['lab', 'customer'],
-      uniqueid: '',
-
       interval: '',
       refresh_interval: 5000,
       errorInfo: '',
@@ -63,7 +55,7 @@ export default {
     }
   },
   mounted () {
-    // let that = this
+    let that = this
     this.$common.setBrowserTitle("Home")
     this.getIndices()
     this.scheduled()
@@ -73,7 +65,7 @@ export default {
 
     window.onclick = function(event) {
       if (event.target == document.getElementById("upload-modal")) {
-        document.getElementById("upload-modal").style.display = "none";
+        that.closeUploadModal();
       }
     }
   },
@@ -175,6 +167,7 @@ export default {
     closeUploadModal(){
       var modal = document.getElementById("upload-modal")
       modal.style.display = "none"
+      document.getElementById('fileInput').value = null
       document.getElementById('submit').disabled = true
       
     },
@@ -182,9 +175,25 @@ export default {
       document.getElementById('fileInput').click()
     },
     async submit(){
+      if((document.getElementById("platform").value == '') | (document.getElementById("product").value === '') | (document.getElementById("category").value == '') | (document.getElementById("uniqueid").value == '')){
+        alert("Platform or Product or Category or Uniqueid must write something!");
+        return
+      }
+      var files = document.getElementById("fileInput").files;
+      var dup = []
+      for (let file of files){
+        var name = document.getElementById("platform").value.toLowerCase() + "_" + document.getElementById("product").value.toLowerCase() + "_" + document.getElementById("category").value.toLowerCase() + "_" + document.getElementById("uniqueid").value.toLowerCase() + "_" + file.name.toLowerCase()
+        if(this.indices.includes(name)){
+          dup.push(name)
+        }
+      }
+      if(dup.length > 0){
+        alert(`File combine name is not unique: ${dup.join(",")}`);
+        return
+      }
+
       this.$common.startLoading()
       let formData = new FormData()
-      let files = document.getElementById("fileInput").files;
       for (let file of files){
         formData.append("file[]", file);
       }
