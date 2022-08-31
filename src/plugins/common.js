@@ -215,7 +215,7 @@ export default {
             var ret = ''
             params.forEach((param) => {
               if(param['seriesName'] != 'highlight'){
-                ret = ret + param.marker + param.seriesName +":" + param.data['origin'] + '<br/>'
+                ret = ret + param.marker + param.seriesName +"--" + param.data['origin'] + '<br/>'
               }
             })
             return ret;
