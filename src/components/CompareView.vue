@@ -7,6 +7,7 @@
         label FilterKeywords:
         input(id="keywords" type="text")
         a(class="go" @click="go") GO
+        a(class="func" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="func" @click="openHighlightModal") Highlight
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
@@ -16,6 +17,10 @@
           input(class="modal-input-color" type="color" id="highlight-color")
           span(class="addBtn" @click="newHighlightItem") Add
         ul(id="highlight-list" style="list-style: none;")
+    div(id="keywords-modal" class="keywords-modal")
+      div(class="keywords-modal-content")
+        //- div(id="keywords-graph" style="width:3000px;height:750px;")
+        svg(id="viz" width="1600" height="800")
     div(id="graphs" class="graphs")
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
@@ -24,6 +29,7 @@
 
 <script>
 import * as echarts from 'echarts'
+import * as d3 from 'd3'
 
 export default {
   data () {
@@ -35,11 +41,23 @@ export default {
         left: 30
       },
       data: {},
+      keyWordsType: {},
+      keyWordsTree: {},
       originIndex: {},
       invertedIndexTable: {},
+      svg:'',
+      zoom:'',
       index:[''],
       filterProcess: ['txlProcBranch'],
       filterKey: ['pma', 'pmb', 'txatt'],
+      filterData: {
+        4826:['TxBranchCtrlH ', 'event(d)'],
+        6291:['txlProcBranchH ', 'Pma(c)'],
+        6292:['txlProcBranchH ', 'Pmb(c)'],
+        17981:['txlProcBranchH ', 'dpd(r)bit10'],
+        17982:['txlProcBranchH ', 'dpd(r)bit11'],
+        17983:['txlProcBranchH ', 'dpd(r)bit12'],
+      },
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       graphHeight: 200,
       graphWidth: 550,
@@ -88,6 +106,9 @@ export default {
     window.onclick = function(event) {
       if (event.target == document.getElementById("highlight-modal")) {
         document.getElementById("highlight-modal").style.display = "none";
+      }else if (event.target == document.getElementById("keywords-modal")) {
+        document.getElementById("keywords-modal").style.display = "none";
+        console.log(that.filterData)
       }
     }
   },
@@ -100,11 +121,22 @@ export default {
         })
         .then(response => {
           this.data = response.data.story_line
+          this.keyWordsType = response.data.key_type
           this.originIndex = response.data.origin_index
           this.invertedIndexTable = response.data.inverted_index_table
-          this.createGraph()
+          this.keyWordsTree = this.$common.generateKeyWordsTree(this.data, this.keyWordsType)
+          this.createKeyWordsTreeGraph()
+          // this.createGraph()
           this.$common.stopLoading()
         })
+    },
+    resetCoordinates(){
+      this.zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomed)
+      d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    },
+    zoomed(event) {
+      const {transform} = event
+      d3.select("#canvas").attr("transform", transform)
     },
     createGraph () {
       let that = this
@@ -220,6 +252,13 @@ export default {
         })
       })
     },
+    createKeyWordsTreeGraph(){
+      this.svg = d3.select(`#viz`).append("g")
+              .attr("id", "canvas")
+              .style("font", "8px sans-serif");
+      this.resetCoordinates()
+      this.$common.createTreeSvg(this.keyWordsTree, this.svg, this.filterData)
+    },
     clearChildDoms(id){
       var content = document.getElementById(id)
       while (content.firstChild) {
@@ -238,6 +277,14 @@ export default {
     },
     closeHighlightModal(){
       var modal = document.getElementById("highlight-modal")
+      modal.style.display = "none"
+    },
+    openKeyWordsTreeModal(){
+      var modal = document.getElementById("keywords-modal")
+      modal.style.display = "block"
+    },
+    closeKeyWordsTreeModal(){
+      var modal = document.getElementById("keywords-modal")
       modal.style.display = "none"
     },
     newHighlightItem(){
@@ -298,7 +345,7 @@ html,body {
 .compare-view-full-height {
   position: sticky !important;
   height: 100%;
-  /* overflow-y: hidden !important; */
+  overflow-y: hidden !important;
 }
 
 .compare-view-topnav {
@@ -329,11 +376,11 @@ html,body {
 
 .compare-view-topnav .func{
   float: right;
-  margin-right: 20px;
-  width: 80px;
+  margin-right: 10px;
+  width: 200px;
   text-align: center; /* Center-align text */
   color: white; /* White text color */
-  font-size: 20px; /* Increased font size */
+  font-size: 30px; /* Increased font size */
   background-color: #FFCC00;
 }
 
@@ -374,6 +421,30 @@ html,body {
   border: 1px solid rgb(255, 255, 255);
 }
 
+/***************************************** keywords modal css */
+.keywords-modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+}
+
+.keywords-modal-content {
+  overflow: auto;
+  position: relative;
+  background-color: #fefefe;
+  margin: 5% auto;
+  /* padding: 20px; */
+  border: 1px solid #888;
+  width: 95%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
 /***************************************** highlight modal css */
 .modal {
   display: none; /* Hidden by default */
@@ -383,9 +454,6 @@ html,body {
   top: 0;
   width: 100%; /* Full width */
   height: 100%; /* Full height */
-  /* overflow: auto; Enable scroll if needed */
-  /* background-color: rgb(0,0,0); Fallback color */
-  /* background-color: rgba(0,0,0,0.4); Black w/ opacity */
 }
 
 /* Modal Content */

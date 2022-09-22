@@ -23,7 +23,7 @@
       div(class="overlay-content")
         div(id="log-detail-navbar" class="navbar")
           //- a Filter
-          a(class="button" @click="openGraphDetail") Graph
+          //- a(class="button" @click="openGraphDetail") Graph
           a(class="button" @click="closeLogDetail") Cancel
           a(class="title") {{ process }}
         table(id='content')
