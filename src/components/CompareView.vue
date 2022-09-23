@@ -2,10 +2,6 @@
   div(class="compare-view-full-height")
     div(id="topnav" class="compare-view-topnav")
       form(class="form-inline")
-        label FilterProcess:
-        input(id="process" type="text")
-        label FilterKeywords:
-        input(id="keywords" type="text")
         a(class="go" @click="go") GO
         a(class="func" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="func" @click="openHighlightModal") Highlight
@@ -41,22 +37,20 @@ export default {
         left: 30
       },
       data: {},
-      keyWordsType: {},
       keyWordsTree: {},
       originIndex: {},
       invertedIndexTable: {},
       svg:'',
       zoom:'',
       index:[''],
-      filterProcess: ['txlProcBranch'],
-      filterKey: ['pma', 'pmb', 'txatt'],
       filterData: {
-        4826:['TxBranchCtrlH ', 'event(d)'],
-        6291:['txlProcBranchH ', 'Pma(c)'],
-        6292:['txlProcBranchH ', 'Pmb(c)'],
-        17981:['txlProcBranchH ', 'dpd(r)bit10'],
-        17982:['txlProcBranchH ', 'dpd(r)bit11'],
-        17983:['txlProcBranchH ', 'dpd(r)bit12'],
+        33:['TxBranchCtrlB', 'event(d)'],
+        4826:['TxBranchCtrlH', 'event(d)'],
+        6291:['txlProcBranchH', 'Pma(c)'],
+        6292:['txlProcBranchH', 'Pmb(c)'],
+        17981:['txlProcBranchH', 'dpd(r)bit10'],
+        17982:['txlProcBranchH', 'dpd(r)bit11'],
+        17983:['txlProcBranchH', 'dpd(r)bit12'],
       },
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       graphHeight: 200,
@@ -70,8 +64,6 @@ export default {
     let that = this
     this.$common.setBrowserTitle("Compare View")
     this.$common.setChartDartTheme(echarts)
-    document.getElementById("process").value = this.filterProcess.join(",")
-    document.getElementById("keywords").value = this.filterKey.join(",")
     this.getKeyValues(new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`).get('index'))
   
     Object.keys(this.highlightKeyword).forEach((key) => {
@@ -121,12 +113,11 @@ export default {
         })
         .then(response => {
           this.data = response.data.story_line
-          this.keyWordsType = response.data.key_type
           this.originIndex = response.data.origin_index
           this.invertedIndexTable = response.data.inverted_index_table
-          this.keyWordsTree = this.$common.generateKeyWordsTree(this.data, this.keyWordsType)
+          this.keyWordsTree = this.$common.generateKeyWordsTree(this.data)
           this.createKeyWordsTreeGraph()
-          // this.createGraph()
+          this.createGraph()
           this.$common.stopLoading()
         })
     },
@@ -141,32 +132,72 @@ export default {
     createGraph () {
       let that = this
       var graphs = {}
+
+      var selected = {}
+      Object.keys(this.filterData).forEach((item) => {
+        if (!selected.hasOwnProperty(this.filterData[item][0])){
+          selected[this.filterData[item][0]] = []
+        }
+
+        if (this.filterData[item][1].includes("(d)")){
+          selected[this.filterData[item][0]].push([this.filterData[item][1], "discrete"])
+        }else if(this.filterData[item][1].includes("(c)")){
+          selected[this.filterData[item][0]].push([this.filterData[item][1], "continuous"])
+        }else if(this.filterData[item][1].includes("(r)")){
+          selected[this.filterData[item][0]].push([this.filterData[item][1].split("(r)")[0]+'(r)', "register", parseInt(this.filterData[item][1].split("(r)")[1].replace("bit",""))])
+        }
+      })
+
       Object.keys(this.data).forEach((index) => {
         Object.keys(this.data[index]).forEach((dev) => {
-          Object.keys(this.data[index][dev]).forEach((process) => {
-            this.filterProcess.forEach((pword) => {
-              if (process.toLowerCase().includes(pword.toLowerCase())) {
-                Object.keys(this.data[index][dev][process]).forEach((kv) => {
-                  this.filterKey.forEach((kword) => {
-                    if (kv.toLowerCase().includes(kword.toLowerCase())) {
-                      if (!graphs.hasOwnProperty(process)){
-                        graphs[process] = {}
-                      }
-                      var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
-                      if (!graphs[process].hasOwnProperty(kv)){
-                        graphs[process][kv] = [[index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine]]
-                      }else{
-                        graphs[process][kv].push([index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine])
-                      }
-                    }
-                  })
-                })
+          Object.keys(selected).forEach((process) => {
+            selected[process].forEach((item) => {
+              var kv = item[0]
+              if(this.data[index][dev].hasOwnProperty(process)){
+                if(this.data[index][dev][process].hasOwnProperty(kv)){
+                  if (!graphs.hasOwnProperty(process)){
+                    graphs[process] = {}
+                  }
+                  var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
+                  
+                  var kvData = this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2)
+                  if(item[1] == "register"){
+                    kv = kv + "_bit" + String(item[2])
+                  }
+
+                  if (!graphs[process].hasOwnProperty(kv)){
+                    graphs[process][kv] = [[index, dev, kvData, markLine, item]]
+                  }else{
+                    graphs[process][kv].push([index, dev, kvData, markLine, item])
+                  }
+                }
               }
             })
           })
+          // Object.keys(this.data[index][dev]).forEach((process) => {
+          //   this.filterProcess.forEach((pword) => {
+          //     if (process.toLowerCase().includes(pword.toLowerCase())) {
+          //       Object.keys(this.data[index][dev][process]).forEach((kv) => {
+          //         this.filterKey.forEach((kword) => {
+          //           if (kv.toLowerCase().includes(kword.toLowerCase())) {
+          //             if (!graphs.hasOwnProperty(process)){
+          //               graphs[process] = {}
+          //             }
+          //             var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
+          //             if (!graphs[process].hasOwnProperty(kv)){
+          //               graphs[process][kv] = [[index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine]]
+          //             }else{
+          //               graphs[process][kv].push([index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine])
+          //             }
+          //           }
+          //         })
+          //       })
+          //     }
+          //   })
+          // })
         })
       })
-      var option = this.$common.getChartConfig()
+      
       var processes = Object.keys(graphs).sort()
       processes.forEach((process) => {
         var row = document.createElement("div")
@@ -185,15 +216,25 @@ export default {
         document.getElementById('graphs').appendChild(row)
 
         Object.keys(graphs[process]).forEach((kv) => {
-          
+          var option = this.$common.getChartConfig()
           var pack = {}
+          var categroies = []
           graphs[process][kv].forEach((item) => {
+            
             item[2].forEach((data, index) => {
               if(index < item[2].length - 1){ // filter timestamp
                 if (!pack.hasOwnProperty(`${index}`)){
                   pack[`${index}`] = []
                 }
-                pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1]])
+                if(item[4][1] == 'discrete'){
+                  categroies = this.$common.arrayDuplicates(this.$common.arrayExtend(categroies, data)).sort()
+                  option['yAxis'] = {'type': 'category', 'data': categroies}
+                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
+                }else if(item[4][1] == 'register'){
+                  pack[`${index}`].push([item[0], data.map((v) => (this.$common.hex2bin(v)[31-item[4][2]])), item[3], item[2][item[2].length-1], item[4][1]])
+                }else{
+                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
+                }
               }
             })
           })
@@ -228,7 +269,7 @@ export default {
                     name: `${line[0]}`,
                     type: 'line',
                     showSymbol: false,
-                    data: line[1].map((v, i) => ({'value': parseFloat(v), 'timestamp': line[3][i]})),
+                    data: line[1].map((v, i) => ({'value': line[4] == 'discrete' ? v : parseFloat(v), 'timestamp': line[3][i]})),
                     markLine: line[2]
                   }
                 )
@@ -243,7 +284,7 @@ export default {
               chart.setOption(option)
               chart.on('click', function(params) {
                 if(params['componentType'] != 'markLine'){
-                  let routeData = that.$router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(that.highlightKeyword), filterKey:JSON.stringify(that.filterKey)}});
+                  let routeData = that.$router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(that.highlightKeyword), filterData:JSON.stringify(that.filterData)}});
                   window.open(routeData.href, '_blank');
                 }
               })
@@ -266,8 +307,6 @@ export default {
       }
     },
     go () {
-      this.filterProcess = document.getElementById("process").value.split(/,/)
-      this.filterKey = document.getElementById("keywords").value.split(/,/)
       this.clearChildDoms('graphs')
       this.createGraph()
     },

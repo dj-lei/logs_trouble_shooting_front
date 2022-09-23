@@ -4,7 +4,7 @@
       a(class="index") {{index}}
     div(id="side-nav" class="sidenav")
       a(id="highlight" @click="openHighlightModal") Highlight
-      a(id="filter" @click="openFilterModal") Filter
+      a(id="filter" @click="openKeyWordsTreeModal") Filter
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
@@ -13,11 +13,15 @@
           input(class="modal-input-color" type="color" id="highlight-color")
           span(class="addBtn" @click="newHighlightItem") Add
         ul(id="highlight-list" style="list-style: none;")
-    div(id="filter-modal" class="modal")
-      div(class="modal-content")
-        div(class="modal-header")
-          h2 Filter Keywords Graph
-          input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
+    div(id="keywords-modal" class="keywords-modal")
+      div(class="keywords-modal-content")
+        //- div(id="keywords-graph" style="width:3000px;height:750px;")
+        svg(id="keywords" width="1600" height="800")
+    //- div(id="filter-modal" class="modal")
+    //-   div(class="modal-content")
+    //-     div(class="modal-header")
+    //-       h2 Filter Keywords Graph
+    //-       input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
           //- v-on:scroll="scrollLogDetail"
     div(id="log-detail" class="overlay")
       div(class="overlay-content")
@@ -70,6 +74,8 @@ export default {
       prevScrollpos: 0,
 
       svg: '',
+      svgKeywordsTree:'',
+      keyWordsTree: {},
       drag: '',
       zoom: '',
       logNum : 10,
@@ -114,9 +120,9 @@ export default {
     this.kv = url.get('kv')
     this.dataIndex = url.get('dataIndex')
     this.highlightKeyword = JSON.parse(url.get('highlightKeyword'))
-    this.filterGraphs = JSON.parse(url.get('filterKey')) 
+    this.filterGraphs = JSON.parse(url.get('filterData')) 
 
-    document.getElementById("filter-input").value = this.filterGraphs.join(",")
+    // document.getElementById("filter-input").value = this.filterGraphs.join(",")
 
     Object.keys(this.highlightKeyword).forEach((key) => {
       var li = document.createElement("li");
@@ -153,9 +159,8 @@ export default {
       if (event.target == document.getElementById("highlight-modal")) {
         that.createHighlightPoint()
         document.getElementById("highlight-modal").style.display = "none";
-      }else if(event.target == document.getElementById("filter-modal")){
-        that.filterGraphs = document.getElementById("filter-input").value.split(/,/)
-        document.getElementById("filter-modal").style.display = "none";
+      }else if(event.target == document.getElementById("keywords-modal")){
+        document.getElementById("keywords-modal").style.display = "none";
       }
     }
 
@@ -171,12 +176,21 @@ export default {
           this.allData = response.data.content.story_line
           this.devices = Object.keys(this.allData)
           this.data = this.allData[this.devices[0]]
+
+          var keywords = {}
+          keywords[index] = {}
+          keywords[index][this.devices[0]] = {}
+          this.data.forEach((item) => {
+            keywords[index][this.devices[0]][item['process']] = item['kv']
+          })
+          this.keyWordsTree = this.$common.generateKeyWordsTree(keywords)
           this.allInvertedIndexTable = response.data.content.inverted_index_table
           this.invertedIndexTable = this.allInvertedIndexTable[this.devices[0]]
           this.resetCoordinates()
           this.createTopNav()
+          this.createKeyWordsTreeGraph()
           this.createGraph(0)
-          this.createHighlightPoint()
+          // this.createHighlightPoint()
           for (var i = 0; i < this.data.length; i++) {
             if(this.data[i]['process'] == this.process){
               this.graphLogData = this.data[i]
@@ -193,6 +207,10 @@ export default {
     resetCoordinates(){
       this.zoom = d3.zoom().scaleExtent([1, 2]).on("zoom", this.zoomed)
       d3.select("#viz0").call(this.zoom).on("dblclick.zoom", null)
+    },
+    resetKeywordsTreeCoordinates(){
+      var zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomed)
+      d3.select("#keywords").call(zoom).on("dblclick.zoom", null)
     },
     zoomed(event) {
       const {transform} = event
@@ -370,6 +388,13 @@ export default {
       //   // .delay((d,i)=>i*10)
       //   .ease(d3.easeCubic)
       //   .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
+    },
+    createKeyWordsTreeGraph(){
+      this.svgKeywordsTree = d3.select(`#keywords`).append("g")
+              .attr("id", "canvas")
+              .style("font", "8px sans-serif");
+      this.resetKeywordsTreeCoordinates()
+      this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs)
     },
     createBookmark(){
       function dragstarted(event) {
@@ -562,64 +587,6 @@ export default {
       document.getElementById("graph-detail").style.left = "50%"
       document.getElementById("graph-detail").style.width = "50%"
     },
-    openGraphDetail() {
-      let that = this
-      this.$common.removeAllChildDom("graphs")
-
-      var graphs = []
-      Object.keys(this.graphLogData.kv).forEach((item) => {
-        this.filterGraphs.forEach((key) => {
-          if (item.toLowerCase().includes(key.toLowerCase())) {
-            var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable, Object.keys(this.graphLogData.msg), this.graphLogData.kv[item][this.graphLogData.kv[item].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
-            graphs.push([item, this.graphLogData.kv[item].slice(0, this.graphLogData.kv[item].length - 2), markLine])
-          }
-        })
-      })
-      
-      var option = this.$common.getChartConfig()
-      graphs.forEach((graph, graphIndex) => {
-        var element = document.createElement("div")
-        element.setAttribute('id', `data${graphIndex}`)
-        element.setAttribute('class', "graphs")
-        element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-        document.getElementById('graphs').appendChild(element)
-        var chart = echarts.init(document.getElementById(`data${graphIndex}`), 'dark')
-
-        option['title']['text'] = graph[0]
-        option['series'] = []
-        var legend = []
-        graph[1].forEach((data, lineIndex) => {
-          if(lineIndex < graph[1].length - 1){ // filter timestamp
-            legend.push(`${graph[0]}_${lineIndex}`)
-            option['series'].push(
-              {
-                name: `${graph[0]}_${lineIndex}`,
-                type: 'line',
-                showSymbol: false,
-                data: data.map((v, i) => ({'value': parseFloat(v), 'timestamp': graph[1][graph[1].length-1][i]})),
-                markLine: graph[2]
-              }
-            )
-          }
-        })
-        var list = [];
-        for (var i = 0; i < option['series'][0]['data'].length; i++) {
-          list.push(i);
-        }
-        option['legend']['data'] = legend
-        option['xAxis']['data'] = list
-        chart.setOption(option)
-        chart.on('click', function(params) {
-          if(params['componentType'] != 'markLine'){
-            var name = params['seriesName'].split(/_/)
-            name = name.slice(0, name.length - 1).join("_")
-            that.openLogDetail(parseInt(that.graphLogData.kv[name][that.graphLogData.kv[name].length-2][params['dataIndex']]))
-          }
-        });
-      })
-      document.getElementById("graph-detail").style.left = `${100 -parseInt(this.graphWidth / this.width * 100)}%`
-      document.getElementById("graph-detail").style.width = `${parseInt(this.graphWidth / this.width * 100)}%`
-    },
     closeGraphDetail() {
       var content = document.getElementById('graphs')
       while (content.firstChild) {
@@ -635,12 +602,12 @@ export default {
       var modal = document.getElementById("highlight-modal")
       modal.style.display = "none"
     },
-    openFilterModal(){
-      var modal = document.getElementById("filter-modal")
+    openKeyWordsTreeModal(){
+      var modal = document.getElementById("keywords-modal")
       modal.style.display = "block"
     },
-    closeFilterModal(){
-      var modal = document.getElementById("filter-modal")
+    closeKeyWordsTreeModal(){
+      var modal = document.getElementById("keywords-modal")
       modal.style.display = "none"
     },
     newHighlightItem(){
@@ -874,6 +841,30 @@ th, td {
 #filter{
   top: 150px;
   background-color: #FFCC00;
+}
+
+/***************************************** keywords modal css */
+.keywords-modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+}
+
+.keywords-modal-content {
+  overflow: auto;
+  position: relative;
+  background-color: #fefefe;
+  margin: 5% auto;
+  /* padding: 20px; */
+  border: 1px solid #888;
+  width: 95%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  animation-name: animatetop;
+  animation-duration: 0.4s
 }
 
 /***************************************** highlight modal css */

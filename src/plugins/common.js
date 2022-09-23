@@ -339,6 +339,8 @@ export default {
       const gNode = svg.append("g")
           .attr("cursor", "pointer")
           .attr("pointer-events", "all");
+
+      // console.log(root)
     
       function update(source) {
         // const duration = d3.event && d3.event.altKey ? 2500 : 250;
@@ -489,6 +491,25 @@ export default {
       return a.filter(value => b.includes(value))
     },
 
+    arrayDuplicates(a){
+      return Array.from(new Set(a))
+    },
+
+    arrayExtend(a, b){
+      Array.prototype.push.apply(a,b)
+      return a
+    },
+
+    hex2bin(hex){
+      var res = (parseInt(hex, 16).toString(2)).padStart(8, '0')
+      if (res.length < 32){
+        for(var i=32 - res.length;i<32;i++){
+          res = '0' + res 
+        }
+      }
+      return res;
+    },
+
     invertedIndexTableQuery(invertedIndexTable, processOriginIndex, kvOriginIndex, highlightKeyword){
       var res = {
         symbol: 'none',
@@ -525,7 +546,7 @@ export default {
       return res
     },
 
-    generateKeyWordsTree(data, keyWordsType){
+    generateKeyWordsTree(data){
       var res = {'name': 'KeyWords'}
       var indices = []
       Object.keys(data).forEach((index) => {
@@ -536,16 +557,16 @@ export default {
           Object.keys(data[index][dev]).forEach((process) => {
             var keywords = []
             Object.keys(data[index][dev][process]).forEach((keyword) => {
-              if (keyWordsType[index][dev][process][keyword] == 'register') {
+              if (keyword.includes('(r)')) {
                 var bits = []
                 for(var i=0; i < 32; i++ ){
                   bits.push({'name': 'bit'+String(i)})
                 }
-                keywords.push({'name':keyword+'(r)', 'children': bits})
-              }else if (keyWordsType[index][dev][process][keyword] == 'discrete'){
-                keywords.push({'name':keyword+'(d)', 'value': keyWordsType[index][dev][process][keyword]})
+                keywords.push({'name':keyword, 'children': bits})
+              }else if (keyword.includes('(d)')){
+                keywords.push({'name':keyword, 'value': 'discrete'})
               }else{
-                keywords.push({'name':keyword+'(c)', 'value': keyWordsType[index][dev][process][keyword]})
+                keywords.push({'name':keyword, 'value': 'continuous'})
               }
             })
             processes.push({'name': process, 'children': keywords})
