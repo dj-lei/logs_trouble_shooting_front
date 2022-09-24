@@ -207,6 +207,7 @@ export default {
           text: 'Stacked Line'
         },
         // backgroundColor:'#3F3F3F',
+        toolbox:{show:true,feature:{dataView:{show:true}}},
         tooltip: {
           trigger: 'axis',
           show: true,
@@ -258,51 +259,6 @@ export default {
           }
         ],
         series: []
-      }
-    },
-
-    getTreeChartConfig(data){
-      return {
-        tooltip: {
-          trigger: 'item',
-          triggerOn: 'mousemove'
-        },
-        series: [
-          {
-            type: 'tree',
-            data: [data],
-            // top: '10%',
-            left: '8%',
-            // bottom: '22%',
-            right: '20%',
-            edgeShape: 'polyline',
-            edgeForkPosition: '63%',
-            symbol: 'emptyCircle',
-            orient: 'vertical',
-            initialTreeDepth: 2,
-            label: {
-              position: 'top',
-              rotate: -45,
-              verticalAlign: 'middle',
-              align: 'right',
-              fontSize: 10
-            },
-            leaves: {
-              label: {
-                position: 'bottom',
-                rotate: -45,
-                verticalAlign: 'middle',
-                align: 'left'
-              }
-            },
-            emphasis: {
-              focus: 'descendant'
-            },
-            expandAndCollapse: true,
-            animationDuration: 550,
-            animationDurationUpdate: 750
-          }
-        ]
       }
     },
 

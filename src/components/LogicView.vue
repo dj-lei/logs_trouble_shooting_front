@@ -27,7 +27,7 @@
       div(class="overlay-content")
         div(id="log-detail-navbar" class="navbar")
           //- a Filter
-          //- a(class="button" @click="openGraphDetail") Graph
+          a(class="button" @click="exportExcel") Export
           a(class="button" @click="closeLogDetail") Cancel
           a(class="title") {{ process }}
         table(id='content')
@@ -69,7 +69,7 @@ export default {
       dataIndex: 0,
       devices: [],
       isDiff: false,
-      filterGraphs: ['pma', 'pmb', 'txatt'],
+      filterGraphs: {},
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       prevScrollpos: 0,
 
@@ -80,8 +80,11 @@ export default {
       zoom: '',
       logNum : 10,
       data:[],
+      dataTree:{},
       allData: [],
       subData: [],
+      allLine: {},
+      selectedLine: {},
       graphLogData: [],
       invertedIndexTable: {},
       allInvertedIndexTable:{},
@@ -178,10 +181,12 @@ export default {
           this.data = this.allData[this.devices[0]]
 
           var keywords = {}
+          var filterData = {}
           keywords[index] = {}
           keywords[index][this.devices[0]] = {}
           this.data.forEach((item) => {
             keywords[index][this.devices[0]][item['process']] = item['kv']
+            this.dataTree[item['process']] = item['kv']
           })
           this.keyWordsTree = this.$common.generateKeyWordsTree(keywords)
           this.allInvertedIndexTable = response.data.content.inverted_index_table
@@ -493,43 +498,25 @@ export default {
       this.$common.removeAllChildDom("graphs")
 
       var graphs = []
-      Object.keys(this.graphLogData.kv).forEach((item) => {
-        this.filterGraphs.forEach((key) => {
-          if (item.toLowerCase().includes(key.toLowerCase())) {
-            graphs.push([item, this.graphLogData.kv[item].slice(0, this.graphLogData.kv[item].length - 1)])
-          }
-        })
+      var processes = []
+      // extrac need line
+      Object.keys(this.filterGraphs).forEach((k) => {
+        var item = this.filterGraphs[k]
+        var tmp = ''
+        if (item[1].includes('(r)')) {
+          tmp = item[1].split('(r)')[0]+'(r)'
+        }else{
+          tmp = item[1]
+        }
+        if ((this.dataTree.hasOwnProperty(item[0]))&(this.dataTree[item[0]].hasOwnProperty(tmp))){
+          // [process, key, [value, timestamp, processindex, globalindex]]
+          graphs.push([item[0], item[1], this.dataTree[item[0]][tmp]])
+          processes.push(item[0])
+        }
       })
+      processes = this.$common.arrayDuplicates(processes)
       
-      var makeLineAxis = []
-      var markLine = {
-        symbol: 'none',
-        label:{
-          // color:'#FFFFFF',
-          fontSize:12,
-        },
-        lineStyle:{
-          type:'dotted',
-          width: 2
-        },
-        data:[]
-      }
-      Object.keys(this.highlightKeyword).forEach((item) => {
-        item.split(/,/).forEach((key) => {
-          if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase()))
-          {
-            var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key]['x'], Object.keys(this.graphLogData.msg))
-            if (intersec.length > 0){
-              intersec.forEach((elm) => {
-                var pos = d3.bisect(Object.keys(this.graphLogData.msg).map(v => {return parseInt(v)}), parseInt(elm));
-                markLine['data'].push({'xAxis': pos, 'label': {'color': this.highlightKeyword[item], 'formatter':key, 'fontSize':10}})
-                makeLineAxis.push({'value':[pos,0]})
-              })
-            }
-          }
-        })
-      })
-      
+      // package line
       var option = this.$common.getChartConfig()
       var element = document.createElement("div")
       element.setAttribute('id', "Sequential")
@@ -539,53 +526,189 @@ export default {
 
       option['title']['text'] = "Sequential"
       option['series'] = []
+      option['yAxis'] = [
+        {type: 'value'}
+      ]
+      var yAxisIndex = 0
       var legend = []
       var unselect = {}
+      var globalPoints = []
       graphs.forEach((data) => {
-        data[1].forEach((items, index) => {
-          if(index < data[1].length-2){
+        data[2].forEach((items, index) => {
+          if(index < data[2].length-3){
             var d = []
-            var normalize = this.$common.normalize(items.map((v) => parseFloat(v)), 100)
-            items.forEach((item, i) => {
-              d.push({'value': [parseInt(data[1][data[1].length-1][i]), normalize[i][0]], 'origin':normalize[i][1]})
-            })
-            legend.push(`${data[0]}_${index}`)
-            unselect[`${data[0]}_${index}`] = false
-            option['series'].push(
-              {
-                name: `${data[0]}_${index}`,
-                type: 'line',
-                showSymbol: false,
-                data: d,
-              }
-            )
+            if (data[1].includes('(d)')){
+              var categories = []
+              items.forEach((item, i) => {
+                var point = data[2][data[2].length-1][i]
+                globalPoints.push(point)
+                categories.push(item)
+                d.push({'value': [parseInt(point), item], 'origin':item, 'processIndex':parseInt(data[2][data[2].length-2][i])})
+              })
+              categories = this.$common.arrayDuplicates(categories)
+              option['yAxis'].push({
+                type: 'category',
+                data: categories
+              })
+              yAxisIndex = yAxisIndex + 1
+              option['series'].push(
+                {
+                  name: `${data[0]}.${data[1]}.${index}`,
+                  type: 'line',
+                  yAxisIndex: yAxisIndex,
+                  showSymbol: false,
+                  data: d,
+                }
+              )
+            }else if(data[1].includes('(r)')){
+              items.forEach((item, i) => {
+                var point = data[2][data[2].length-1][i]
+                var bit = parseInt(data[1].split('(r)')[1].replace('bit',''))
+                var hex2bin = this.$common.hex2bin(item)[31-bit]
+                globalPoints.push(point)
+                d.push({'value': [parseInt(point), hex2bin], 'origin':hex2bin, 'processIndex':parseInt(data[2][data[2].length-2][i])})
+              })
+              option['series'].push(
+                {
+                  name: `${data[0]}.${data[1]}.${index}`,
+                  type: 'line',
+                  yAxisIndex: 0,
+                  showSymbol: false,
+                  data: d,
+                }
+              )
+            }else{
+              var normalize = this.$common.normalize(items.map((v) => parseFloat(v)), 1)
+              items.forEach((item, i) => {
+                var point = data[2][data[2].length-1][i]
+                globalPoints.push(point)
+                d.push({'value': [parseInt(point), normalize[i][0]], 'origin':normalize[i][1], 'processIndex':parseInt(data[2][data[2].length-2][i])})
+              })
+              option['series'].push(
+                {
+                  name: `${data[0]}.${data[1]}.${index}`,
+                  type: 'line',
+                  yAxisIndex: 0,
+                  showSymbol: false,
+                  data: d,
+                }
+              )
+            }
+            this.allLine[`${data[0]}.${data[1]}.${index}`] = d 
+            legend.push(`${data[0]}.${data[1]}.${index}`)
+            unselect[`${data[0]}.${data[1]}.${index}`] = false
           }
         })
       })
 
-      legend.push("highlight")
-      option['series'].push(
-        {
-          name: "highlight",
-          type: 'line',
-          showSymbol: false,
-          data: makeLineAxis,
-          markLine: markLine
+      // create makeline by process, highlight.process
+      processes.forEach((process) => {
+        var makeLineAxis = []
+        var markLine = {
+          symbol: 'none',
+          label:{
+            // color:'#FFFFFF',
+            fontSize:12,
+          },
+          lineStyle:{
+            type:'dotted',
+            width: 2
+          },
+          data:[]
         }
-      )
+        Object.keys(this.highlightKeyword).forEach((item) => {
+          item.split(/,/).forEach((key) => {
+            if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase()))
+            {
+              var processData = ''
+              for (var i = 0; i < this.data.length; i++) {
+                if(this.data[i]['process'] == process){
+                  processData = this.data[i]
+                  break
+                }
+              }
+
+              var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key]['x'], Object.keys(processData.msg))
+              if (intersec.length > 0){
+                intersec.forEach((elm) => {
+                  // var pos = d3.bisect(globalPoints.map(v => {return parseInt(v)}), parseInt(elm));
+                  markLine['data'].push({'xAxis': parseInt(elm), 'label': {'color': this.highlightKeyword[item], 'formatter':key, 'fontSize':10}})
+                  makeLineAxis.push({'value':[parseInt(elm),0]})
+                })
+              }
+            }
+          })
+        })
+
+        legend.push("highlight"+"."+process)
+        option['series'].push(
+          {
+            name: "highlight"+"."+process,
+            type: 'line',
+            showSymbol: false,
+            data: makeLineAxis,
+            markLine: markLine
+          }
+        )
+      })
+      
+      // bind click event and paint
       option['legend']['selected'] = unselect
       option['legend']['data'] = legend
       option['xAxis']['type'] = 'value'
-      option['yAxis']['type'] = 'value'
       chart.setOption(option)
       chart.on('click', function(params) {
         if(params['componentType'] != 'markLine'){
           that.openLogDetail(params.data.value[0])
         }
       });
+      chart.on('legendselectchanged', function(params){
+        that.selectedLine = params.selected
+      });
 
+      // open div
       document.getElementById("graph-detail").style.left = "50%"
       document.getElementById("graph-detail").style.width = "50%"
+    },
+    exportExcel(){
+      var res = {}
+      var item = {}
+      Object.keys(this.selectedLine).forEach((line) => {
+        if((this.selectedLine[line] == true)&(!line.includes('highlight'))){
+          item[line] = null
+        }
+      })
+      Object.keys(item).forEach((line) => {
+        this.allLine[line].forEach((e) => {
+          var tmp = {}
+          tmp['GlobalIndex'] = e.value[0]
+          Object.keys(item).forEach((k) => {
+            tmp[k] = null
+          })
+          if (res.hasOwnProperty(e.value[0])){
+            var tmp = res[e.value[0]]
+          }
+          tmp[line] = e.origin
+          res[e.value[0]] = tmp
+        })
+      })
+      var str =  "GlobalIndex,"+Object.keys(item).join(",")+"\n"
+      // var nums = Object.keys(res).map(v => {return parseInt(v)}).sort()
+      var exportData = []
+      Object.keys(res).forEach((num) => {
+        exportData.push(res[num])
+      })
+      for(var i=0; i< exportData.length; i++){
+        for(const key in exportData[i]){
+          str += `${exportData[i][key] + '\t'},`
+        }
+        str += '\n'
+      }
+      const uri = 'data:text/csv;charset=utf-8,\ufeff' + encodeURIComponent(str)
+      const link = document.createElement("a")
+      link.href = uri
+      link.download = 'export.csv'
+      link.click()
     },
     closeGraphDetail() {
       var content = document.getElementById('graphs')
