@@ -207,7 +207,7 @@ export default {
           text: 'Stacked Line'
         },
         // backgroundColor:'#3F3F3F',
-        toolbox:{show:true,feature:{dataView:{show:true}}},
+        // toolbox:{show:true,feature:{dataView:{show:true}}},
         tooltip: {
           trigger: 'axis',
           show: true,
@@ -216,7 +216,7 @@ export default {
             var ret = ''
             params.forEach((param) => {
               if(param['seriesName'] != 'highlight'){
-                ret = ret + param.marker + param.seriesName +"--" + param.data['origin'] + '<br/>'
+                ret = ret + param.marker + param.seriesName +"  value:" + param.data['origin'] + '<br/>'
               }
             })
             return ret;
@@ -269,14 +269,21 @@ export default {
       const dy = 192
       const width = 1600
       root.x0 = dy / 2;
-      root.y0 = 0;
-
+      root.y0 = 500;
+      
       const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x)
       const tree = d3.tree().nodeSize([dx, dy])
       const margin = ({top: 10, right: 120, bottom: 10, left: 40})
 
       root.descendants().forEach((d, i) => {
-        d.id = i;
+        var name = [d.data.name.replace("(","").replace(")","")]
+        var tmp = d
+        while (tmp.parent != null) {
+          name.push(tmp.parent.data.name.replace("(","").replace(")",""))
+          tmp = tmp.parent
+        }
+        name.reverse()
+        d.id = name.join("__");
         d._children = d.children;
         if (d.depth && d.data.name.length !== 7) d.children = null;
       });
@@ -285,10 +292,9 @@ export default {
       //     .attr("viewBox", [-margin.left, -margin.top, width, dx])
       //     .style("font", "10px sans-serif")
       //     .style("user-select", "none");
-    
       const gLink = svg.append("g")
           .attr("fill", "none")
-          .attr("stroke", "#555")
+          .attr("stroke", "#999")
           .attr("stroke-opacity", 0.4)
           .attr("stroke-width", 1.5);
     
@@ -303,10 +309,9 @@ export default {
         const duration = 250;
         const nodes = root.descendants().reverse();
         const links = root.links();
-    
         // Compute the new tree layout.
         tree(root);
-    
+        
         let left = root;
         let right = root;
         root.eachBefore(node => {
@@ -337,7 +342,7 @@ export default {
                 if (filterData.hasOwnProperty(d.id)){
                   delete filterData[d.id]
                   d3.select("#circle"+String(d.id)).attr("fill", "#999")
-                  d3.select("#text"+String(d.id)).attr("stroke", "black")
+                  d3.select("#text"+String(d.id)).attr("stroke", "white")
                 }else{
                   if (d.depth == 4){
                     filterData[d.id] = [d.parent.parent.data.name, d.parent.data.name + d.data.name]
@@ -378,7 +383,7 @@ export default {
                 if (filterData.hasOwnProperty(d.id)){
                   return "#33CC00"
                 }else{
-                  return "black"
+                  return "white"
                 }
               });
     
@@ -423,6 +428,15 @@ export default {
         });
       }
       update(root);
+      this.syncTreeAndFilterData(svg, filterData)
+    },
+
+    syncTreeAndFilterData(svg, filterData){
+      // console.log(svg.node())
+      Object.keys(filterData).forEach((key) => {
+        d3.select("#circle"+key).attr("fill", "#33CC00")
+        d3.select("#text"+key).attr("stroke", "#33CC00")
+      })
     },
 
     zip(x, y){
@@ -459,7 +473,8 @@ export default {
     hex2bin(hex){
       var res = (parseInt(hex, 16).toString(2)).padStart(8, '0')
       if (res.length < 32){
-        for(var i=32 - res.length;i<32;i++){
+        var tmp = 32 - res.length
+        for(var i=0;i<tmp;i++){
           res = '0' + res 
         }
       }
@@ -468,6 +483,7 @@ export default {
 
     invertedIndexTableQuery(invertedIndexTable, processOriginIndex, kvOriginIndex, highlightKeyword){
       var res = {
+        silent: true, // mouse move no event
         symbol: 'none',
         label:{
           // color:'#FFFFFF',

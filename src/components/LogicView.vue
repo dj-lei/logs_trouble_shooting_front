@@ -1,10 +1,10 @@
 <template lang="pug">
   div(class="logic-view-full-height")
-    div(id="topnav" class="logic-view-topnav")
-      a(class="index") {{index}}
-    div(id="side-nav" class="sidenav")
-      a(id="highlight" @click="openHighlightModal") Highlight
-      a(id="filter" @click="openKeyWordsTreeModal") Filter
+    //- div(id="topnav" class="logic-view-topnav")
+    //-   a(class="index") {{index}}
+    //- div(id="side-nav" class="sidenav")
+    //-   a(id="highlight" @click="openHighlightModal") Highlight
+    //-   a(id="filter" @click="openKeyWordsTreeModal") Filter
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
@@ -28,7 +28,9 @@
         div(id="log-detail-navbar" class="navbar")
           //- a Filter
           a(class="button" @click="exportExcel") Export
-          a(class="button" @click="closeLogDetail") Cancel
+          a(class="button" @click="openHighlightModal") Highlight
+          a(class="button" @click="openKeyWordsTreeModal") KeyWordsTree
+          //- a(class="button" @click="closeLogDetail") Cancel
           a(class="title") {{ process }}
         table(id='content')
     div(id="graph-detail" class="overlay-graph" style="left: 100%;")
@@ -84,6 +86,7 @@ export default {
       allData: [],
       subData: [],
       allLine: {},
+      numLine: 0,
       selectedLine: {},
       graphLogData: [],
       invertedIndexTable: {},
@@ -160,9 +163,12 @@ export default {
 
     window.onclick = function(event) {
       if (event.target == document.getElementById("highlight-modal")) {
-        that.createHighlightPoint()
+        // that.createHighlightPoint()
+        that.$common.removeAllChildDom('content')
+        that.openLogDetail(that.numLine, true)
         document.getElementById("highlight-modal").style.display = "none";
       }else if(event.target == document.getElementById("keywords-modal")){
+        that.openLogDetail(that.numLine, true)
         document.getElementById("keywords-modal").style.display = "none";
       }
     }
@@ -182,24 +188,35 @@ export default {
 
           var keywords = {}
           var filterData = {}
+          var processes = {}
           keywords[index] = {}
           keywords[index][this.devices[0]] = {}
           this.data.forEach((item) => {
-            keywords[index][this.devices[0]][item['process']] = item['kv']
-            this.dataTree[item['process']] = item['kv']
+            processes[item['process']] = item['kv']
+          })
+          Object.keys(processes).sort().forEach((item) => {
+            keywords[index][this.devices[0]][item] = processes[item]
+            this.dataTree[item] = processes[item]
           })
           this.keyWordsTree = this.$common.generateKeyWordsTree(keywords)
           this.allInvertedIndexTable = response.data.content.inverted_index_table
           this.invertedIndexTable = this.allInvertedIndexTable[this.devices[0]]
-          this.resetCoordinates()
-          this.createTopNav()
+          // this.resetCoordinates()
+          // this.createTopNav()
           this.createKeyWordsTreeGraph()
-          this.createGraph(0)
+          // this.createGraph(0)
           // this.createHighlightPoint()
           for (var i = 0; i < this.data.length; i++) {
             if(this.data[i]['process'] == this.process){
               this.graphLogData = this.data[i]
-              this.openLogDetail(parseInt(this.graphLogData.kv[this.kv][this.graphLogData.kv[this.kv].length-2][this.dataIndex]))
+              if (this.kv.includes('(r)')) {
+                var kv = this.kv.split('(r)')[0]+'(r)'
+                this.numLine = parseInt(this.graphLogData.kv[kv][this.graphLogData.kv[kv].length-2][this.dataIndex])
+                this.openLogDetail(this.numLine, true)
+              }else{
+                this.numLine = parseInt(this.graphLogData.kv[this.kv][this.graphLogData.kv[this.kv].length-2][this.dataIndex])
+                this.openLogDetail(this.numLine, true)
+              }
               break
             }
           }
@@ -214,12 +231,16 @@ export default {
       d3.select("#viz0").call(this.zoom).on("dblclick.zoom", null)
     },
     resetKeywordsTreeCoordinates(){
-      var zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomed)
+      var zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomedKeywordsTree)
       d3.select("#keywords").call(zoom).on("dblclick.zoom", null)
     },
     zoomed(event) {
       const {transform} = event
-      d3.select("#canvas").attr("transform", transform)
+      d3.select("#canvas0").attr("transform", transform)
+    },
+    zoomedKeywordsTree(event) {
+      const {transform} = event
+      d3.select("#canvas1").attr("transform", transform)
     },
     createTopNav(){
       let that = this
@@ -234,7 +255,7 @@ export default {
         a.onclick = function() {
           document.getElementsByClassName("active")[0].removeAttribute("class");
           this.setAttribute('class', 'dev active')
-          d3.select("#canvas").remove()
+          d3.select("#canvas0").remove()
           d3.select("#viz0").call(that.zoom.transform, d3.zoomIdentity)
           that.data = that.allData[this.innerHTML]
           that.invertedIndexTable = that.allInvertedIndexTable[this.innerHTML]
@@ -311,7 +332,7 @@ export default {
       let filteredData = this.data;
       filteredData.forEach(d=> d.color = "#333")
       this.svg = d3.select(`#viz${number}`).append("g")
-                    .attr("id", "canvas")
+                    .attr("id", "canvas0")
                     .style("font", "8px sans-serif");
       const g = this.svg.append("g").attr("transform", (d,i)=>`translate(${this.margin.left} ${this.margin.top})`);
       const groups = g
@@ -353,7 +374,7 @@ export default {
           var tmp = arr.slice(pos - that.logNum < 0 ? 0 : pos - that.logNum, pos + that.logNum > arr.length ? arr.length : pos + that.logNum);
           that.process = d['process']
           that.graphLogData = d
-          that.openLogDetail(parseInt(tmp[0][1].split("||")[0]))
+          that.openLogDetail(parseInt(tmp[0][1].split("||")[0]), true)
         })
 
       // svg
@@ -386,17 +407,10 @@ export default {
         }
       })
       this.createHighlightPoint()
-
-      // const civs = d3.selectAll(".civ")
-      // civs.data(filteredData, d=>d.civilization)
-      //   .transition()
-      //   // .delay((d,i)=>i*10)
-      //   .ease(d3.easeCubic)
-      //   .attr("transform", (d,i)=>`translate(0 ${y(i)})`)
     },
     createKeyWordsTreeGraph(){
       this.svgKeywordsTree = d3.select(`#keywords`).append("g")
-              .attr("id", "canvas")
+              .attr("id", "canvas1")
               .style("font", "8px sans-serif");
       this.resetKeywordsTreeCoordinates()
       this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs)
@@ -443,7 +457,7 @@ export default {
         })
       })
     },
-    openLogDetail(line) {
+    openLogDetail(line, isRefreshGraph) {
       var content = document.getElementById('content')
       if (!content.hasChildNodes()) {
         Object.keys(this.graphLogData.msg).forEach((num, logIndex) => {
@@ -469,15 +483,15 @@ export default {
         })
         document.getElementById("log-detail").style.width = "50%"
         document.getElementById("log-detail-navbar").style.display = "block"
+        
+      }
+      if(isRefreshGraph){
         this.openSequentialGraphDetail()
       }
       document.getElementById(`log${line-3}`).scrollIntoView(true)
     },
     closeLogDetail() {
-      var content = document.getElementById('content')
-      while (content.firstChild) {
-        content.removeChild(content.lastChild);
-      }
+      this.$common.removeAllChildDom('content')
       document.getElementById("log-detail").style.width = "0%";
       document.getElementById("log-detail-navbar").style.display = "none"
       this.closeGraphDetail()
@@ -659,7 +673,20 @@ export default {
       chart.setOption(option)
       chart.on('click', function(params) {
         if(params['componentType'] != 'markLine'){
-          that.openLogDetail(params.data.value[0])
+          that.numLine = params.data.processIndex
+          if(params.seriesName.split('.')[0] != that.process){
+            that.process = params.seriesName.split('.')[0]
+            that.$common.removeAllChildDom('content')
+            for (var i = 0; i < that.data.length; i++) {
+              if(that.data[i]['process'] == that.process){
+                that.graphLogData = that.data[i]
+                break
+              }
+            }
+            that.openLogDetail(that.numLine, false)
+          }else{
+            that.openLogDetail(that.numLine, false)
+          }
         }
       });
       chart.on('legendselectchanged', function(params){
@@ -772,7 +799,7 @@ export default {
       }
     },
     logs () {
-      console.log(d3.select("#canvas").node())
+      console.log(d3.select("#canvas0").node())
     }
 
   }
@@ -859,6 +886,7 @@ html,body {
 .navbar .button {
   float: left;
   display: block;
+  background-color: #FFCC00;
   color: white;
   text-align: center;
   padding: 5px;
@@ -970,7 +998,7 @@ th, td {
 .keywords-modal {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
+  z-index: 3; /* Sit on top */
   left: 0;
   top: 0;
   width: 100%; /* Full width */
@@ -980,7 +1008,7 @@ th, td {
 .keywords-modal-content {
   overflow: auto;
   position: relative;
-  background-color: #fefefe;
+  background-color: #555;
   margin: 5% auto;
   /* padding: 20px; */
   border: 1px solid #888;
@@ -994,7 +1022,7 @@ th, td {
 .modal {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
+  z-index: 3; /* Sit on top */
   left: 0;
   top: 0;
   width: 100%; /* Full width */

@@ -44,13 +44,13 @@ export default {
       zoom:'',
       index:[''],
       filterData: {
-        33:['TxBranchCtrlB ', 'event(d)'],
-        4826:['TxBranchCtrlH ', 'event(d)'],
-        6291:['txlProcBranchH ', 'Pma(c)'],
-        6292:['txlProcBranchH ', 'Pmb(c)'],
-        17981:['txlProcBranchH ', 'dpd(r)bit10'],
-        17982:['txlProcBranchH ', 'dpd(r)bit11'],
-        17983:['txlProcBranchH ', 'dpd(r)bit12'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__TxBranchCtrlB__eventd:['TxBranchCtrlB', 'event(d)'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmac: ['txlProcBranchH', 'Pma(c)'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmbc: ['txlProcBranchH', 'Pmb(c)'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit10: ['txlProcBranchH', 'dpd(r)bit10'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit11: ['txlProcBranchH', 'dpd(r)bit11'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit12: ['txlProcBranchH', 'dpd(r)bit12'],
+        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__txAttc: ['txlProcBranchH', 'txAtt(c)']
       },
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       graphHeight: 200,
@@ -100,7 +100,6 @@ export default {
         document.getElementById("highlight-modal").style.display = "none";
       }else if (event.target == document.getElementById("keywords-modal")) {
         document.getElementById("keywords-modal").style.display = "none";
-        console.log(that.filterData)
       }
     }
   },
@@ -147,7 +146,6 @@ export default {
           selected[this.filterData[item][0]].push([this.filterData[item][1].split("(r)")[0]+'(r)', "register", parseInt(this.filterData[item][1].split("(r)")[1].replace("bit",""))])
         }
       })
-
       Object.keys(this.data).forEach((index) => {
         Object.keys(this.data[index]).forEach((dev) => {
           Object.keys(selected).forEach((process) => {
@@ -174,27 +172,6 @@ export default {
               }
             })
           })
-          // Object.keys(this.data[index][dev]).forEach((process) => {
-          //   this.filterProcess.forEach((pword) => {
-          //     if (process.toLowerCase().includes(pword.toLowerCase())) {
-          //       Object.keys(this.data[index][dev][process]).forEach((kv) => {
-          //         this.filterKey.forEach((kword) => {
-          //           if (kv.toLowerCase().includes(kword.toLowerCase())) {
-          //             if (!graphs.hasOwnProperty(process)){
-          //               graphs[process] = {}
-          //             }
-          //             var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
-          //             if (!graphs[process].hasOwnProperty(kv)){
-          //               graphs[process][kv] = [[index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine]]
-          //             }else{
-          //               graphs[process][kv].push([index, dev, this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2), markLine])
-          //             }
-          //           }
-          //         })
-          //       })
-          //     }
-          //   })
-          // })
         })
       })
       
@@ -247,14 +224,13 @@ export default {
               graph.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
               graphRow.appendChild(graph)
 
-
               var chart = echarts.init(document.getElementById(`${process}${kv}${index}`), 'dark')
               option['title']['text'] = `${kv}_${index}`
               option['series'] = []
               option['tooltip']['formatter'] = function(params){
                 var ret = ''
                 params.forEach((param) => {
-                  ret = ret + param.marker + param.data.timestamp + "--" + param.data.value + '<br/>'
+                  ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;value:" + param.data.value + '<br/>'
                 })
                 return ret;
               }
@@ -405,7 +381,7 @@ html,body {
 }
 
 .compare-view-topnav .go{
-  float: left;
+  float: right;
   width: 200px;
   text-align: center; /* Center-align text */
   color: white; /* White text color */
@@ -414,7 +390,7 @@ html,body {
 }
 
 .compare-view-topnav .func{
-  float: right;
+  float: left;
   margin-right: 10px;
   width: 200px;
   text-align: center; /* Center-align text */
@@ -424,7 +400,7 @@ html,body {
 }
 
 .compare-view-topnav a:hover {
-  background-color: #555; /* Add a hover color */
+  background-color: #000; /* Add a hover color */
 }
 
 .graphs{
@@ -474,7 +450,7 @@ html,body {
 .keywords-modal-content {
   overflow: auto;
   position: relative;
-  background-color: #fefefe;
+  background-color: #555;
   margin: 5% auto;
   /* padding: 20px; */
   border: 1px solid #888;

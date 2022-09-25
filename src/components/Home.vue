@@ -8,9 +8,9 @@
         //-     div(class="loader")
     div(class="page-right")
       div(id="topnav" class="home-topnav")
-        a(@click="go") GO
         a(@click="openUploadModal") UPLOAD
-        input(id="fileInput" type="file" style="display:none" multiple)
+        a(@click="go") GO
+        input(id="fileInput" type="file" style="display:none")
       div(class="split left")
         input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
         div(class="groups")
@@ -19,22 +19,22 @@
         div(class="groups")
           ul(id="groups2")
         div(id="highlight-modal" class="modal")
-    div(id="upload-modal" class="modal")
-      div(class="modal-content")
-          div(class="modal-header")
-            h2 Log Prefix & Upload
-            form
-              label Platform: 
-              input(type="text" id="platform" placeholder="visby oslo or ...")
-              label Product: 
-              input(type="text" id="product" placeholder="6626 4485 or ...")
-              label Category: 
-              input(type="text" id="category" placeholder="lab or customer")
-              label UniqueId: 
-              input(type="text" id="uniqueid" placeholder="Unique identification")
-          div(class="modal-footer")
-            button(id="submit" class="button" @click="submit" disabled) Submit
-            button(id="select" class="button" @click="select") Select
+    //- div(id="upload-modal" class="modal")
+    //-   div(class="modal-content")
+    //-       div(class="modal-header")
+    //-         h2 Log Prefix & Upload
+    //-         form
+    //-           label Platform: 
+    //-           input(type="text" id="platform" placeholder="visby oslo or ...")
+    //-           label Product: 
+    //-           input(type="text" id="product" placeholder="6626 4485 or ...")
+    //-           label Category: 
+    //-           input(type="text" id="category" placeholder="lab or customer")
+    //-           label UniqueId: 
+    //-           input(type="text" id="uniqueid" placeholder="Unique identification")
+    //-       div(class="modal-footer")
+    //-         button(id="submit" class="button" @click="submit" disabled) Submit
+    //-         button(id="select" class="button" @click="select") Select
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
         div
@@ -60,14 +60,15 @@ export default {
     this.getIndices()
     this.scheduled()
     document.getElementById('fileInput').onchange = function () {
-      document.getElementById('submit').disabled = false
+      // document.getElementById('submit').disabled = false
+      that.submit()
     };
 
-    window.onclick = function(event) {
-      if (event.target == document.getElementById("upload-modal")) {
-        that.closeUploadModal();
-      }
-    }
+    // window.onclick = function(event) {
+    //   if (event.target == document.getElementById("upload-modal")) {
+    //     that.closeUploadModal();
+    //   }
+    // }
   },
   methods: {
     scheduled(){
@@ -161,8 +162,9 @@ export default {
       }
     },
     openUploadModal(){
-      var modal = document.getElementById("upload-modal")
-      modal.style.display = "block"
+      // var modal = document.getElementById("upload-modal")
+      // modal.style.display = "block"
+      document.getElementById('fileInput').click()
     },
     closeUploadModal(){
       var modal = document.getElementById("upload-modal")
@@ -175,32 +177,34 @@ export default {
       document.getElementById('fileInput').click()
     },
     async submit(){
-      if((document.getElementById("platform").value == '') | (document.getElementById("product").value === '') | (document.getElementById("category").value == '') | (document.getElementById("uniqueid").value == '')){
-        alert("Platform or Product or Category or Uniqueid must write something!");
-        return
-      }
-      var files = document.getElementById("fileInput").files;
-      var dup = []
-      for (let file of files){
-        var name = document.getElementById("platform").value.toLowerCase() + "_" + document.getElementById("product").value.toLowerCase() + "_" + document.getElementById("category").value.toLowerCase() + "_" + document.getElementById("uniqueid").value.toLowerCase() + "_" + file.name.toLowerCase()
-        if(this.indices.includes(name)){
-          dup.push(name)
-        }
-      }
-      if(dup.length > 0){
-        alert(`File combine name is not unique: ${dup.join(",")}`);
-        return
-      }
-
+      // if((document.getElementById("platform").value == '') | (document.getElementById("product").value === '') | (document.getElementById("category").value == '') | (document.getElementById("uniqueid").value == '')){
+      //   alert("Platform or Product or Category or Uniqueid must write something!");
+      //   return
+      // }
+      var file = document.getElementById("fileInput").files[0];
+      // var dup = []
+      // for (let file of files){
+      //   var name = document.getElementById("platform").value.toLowerCase() + "_" + document.getElementById("product").value.toLowerCase() + "_" + document.getElementById("category").value.toLowerCase() + "_" + document.getElementById("uniqueid").value.toLowerCase() + "_" + file.name.toLowerCase()
+      //   if(this.indices.includes(name)){
+      //     dup.push(name)
+      //   }
+      // }
+      // if(dup.length > 0){
+      //   alert(`File combine name is not unique: ${dup.join(",")}`);
+      //   return
+      // }
+      
       this.$common.startLoading()
       let formData = new FormData()
-      for (let file of files){
-        formData.append("file[]", file);
-      }
-      formData.append("platform", document.getElementById("platform").value);
-      formData.append("product", document.getElementById("product").value);
-      formData.append("category", document.getElementById("category").value);
-      formData.append("uniqueid", document.getElementById("uniqueid").value);
+      // for (let file of files){
+      //   formData.append("file[]", file);
+      // }
+      formData.append("file", file);
+      console.log(formData)
+      // formData.append("platform", document.getElementById("platform").value);
+      // formData.append("product", document.getElementById("product").value);
+      // formData.append("category", document.getElementById("category").value);
+      // formData.append("uniqueid", document.getElementById("uniqueid").value);
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -210,8 +214,6 @@ export default {
       await this.$http.post(this.$urls.send_file, formData, config).then(
         (response)=>{
         this.$common.stopLoading()
-        document.getElementById('submit').disabled = false
-        document.getElementById("upload-modal").style.display = "none";
       }, (error) => {
         this.errorInfo = 'Wrong file format or Too large!'
         this.errorShown = true
