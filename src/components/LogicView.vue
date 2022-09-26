@@ -187,7 +187,6 @@ export default {
           this.data = this.allData[this.devices[0]]
 
           var keywords = {}
-          var filterData = {}
           var processes = {}
           keywords[index] = {}
           keywords[index][this.devices[0]] = {}

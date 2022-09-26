@@ -200,7 +200,6 @@ export default {
       //   formData.append("file[]", file);
       // }
       formData.append("file", file);
-      console.log(formData)
       // formData.append("platform", document.getElementById("platform").value);
       // formData.append("product", document.getElementById("product").value);
       // formData.append("category", document.getElementById("category").value);

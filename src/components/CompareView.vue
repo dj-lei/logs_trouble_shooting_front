@@ -44,13 +44,13 @@ export default {
       zoom:'',
       index:[''],
       filterData: {
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__TxBranchCtrlB__eventd:['TxBranchCtrlB', 'event(d)'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmac: ['txlProcBranchH', 'Pma(c)'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmbc: ['txlProcBranchH', 'Pmb(c)'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit10: ['txlProcBranchH', 'dpd(r)bit10'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit11: ['txlProcBranchH', 'dpd(r)bit11'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit12: ['txlProcBranchH', 'dpd(r)bit12'],
-        KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__txAttc: ['txlProcBranchH', 'txAtt(c)']
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__TxBranchCtrlB__eventd:['TxBranchCtrlB', 'event(d)'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmac: ['txlProcBranchH', 'Pma(c)'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmbc: ['txlProcBranchH', 'Pmb(c)'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit10: ['txlProcBranchH', 'dpd(r)bit10'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit11: ['txlProcBranchH', 'dpd(r)bit11'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit12: ['txlProcBranchH', 'dpd(r)bit12'],
+        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__txAttc: ['txlProcBranchH', 'txAtt(c)']
       },
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       graphHeight: 200,
