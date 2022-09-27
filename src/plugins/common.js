@@ -289,7 +289,6 @@ export default {
       root.x0 = dy / 2;
       root.y0 = 0;
       
-      var originKeys = Object.keys(filterData)
       root.descendants().forEach((d, i) => {
         var name = [d.data.name.replace("(","").replace(")","")]
         var tmp = d
@@ -306,22 +305,23 @@ export default {
         d.id = name.join("__");
         d._children = d.children;
 
-        originKeys.forEach((key) => {
+        Object.keys(filterData).forEach((key) => {
           var tmp2 = key.split('__').slice(2, key.split('__').length).join('__')
           if (key.includes(process_key_name)){
             flag = true
             if (tmp2 == process_key_name){
-              filterData[d.id] = filterData[key]
+              if(d.id != key){
+                filterData[d.id] = filterData[key]
+                delete filterData[key]
+              }
             }
           }
         })
+
         if (flag == false){
           if (d.depth !== 0) d.children = null;
         }
       });
-      originKeys.forEach((key) => {
-        delete filterData[key]
-      })
     
       // const svg = d3.create("svg")
       //     .attr("viewBox", [-margin.left, -margin.top, width, dx])

@@ -524,12 +524,12 @@ export default {
         }else{
           tmp = item[1]
         }
-        console.log(k)
-        if ((this.dataTree.hasOwnProperty(item[0]))&(this.dataTree[item[0]].hasOwnProperty(tmp))){
-          // [process, key, [value, timestamp, processindex, globalindex]]
-          
-          graphs.push([item[0], item[1], this.dataTree[item[0]][tmp]])
-          processes.push(item[0])
+        if (this.dataTree.hasOwnProperty(item[0])){
+          if(this.dataTree[item[0]].hasOwnProperty(tmp)){
+            // [process, key, [value, timestamp, processindex, globalindex]]
+            graphs.push([item[0], item[1], this.dataTree[item[0]][tmp]])
+            processes.push(item[0])
+          }
         }
       })
       processes = this.$common.arrayDuplicates(processes)
