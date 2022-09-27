@@ -94,9 +94,6 @@ export default {
       width: 1000,
       height: 1200,
 
-      graphHeight: 200,
-      graphWidth: 550,
-
       yAxis:'',
       xAxis:'',
 
@@ -118,6 +115,7 @@ export default {
     }
     this.height = document.body.offsetHeight
     this.graphHeight = document.body.offsetHeight - 20
+    this.graphWidth = document.body.offsetWidth / 2
 
     // extract url param 
     var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
@@ -409,8 +407,10 @@ export default {
     },
     createKeyWordsTreeGraph(){
       this.svgKeywordsTree = d3.select(`#keywords`).append("g")
-              .attr("id", "canvas1")
-              .style("font", "8px sans-serif");
+                .attr("id", "canvas1")
+                .style("font", "10px sans-serif")
+              .append("g")
+                .attr("transform", `translate(0,400)`)
       this.resetKeywordsTreeCoordinates()
       this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs)
     },
@@ -531,11 +531,6 @@ export default {
       
       // package line
       var option = this.$common.getChartConfig()
-      var element = document.createElement("div")
-      element.setAttribute('id', "Sequential")
-      element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-      document.getElementById('graphs').appendChild(element)
-      var chart = echarts.init(document.getElementById("Sequential"), 'dark')
 
       option['title']['text'] = "Sequential"
       option['series'] = []
@@ -556,13 +551,23 @@ export default {
                 var point = data[2][data[2].length-1][i]
                 globalPoints.push(point)
                 categories.push(item)
-                d.push({'value': [parseInt(point), item], 'origin':item, 'processIndex':parseInt(data[2][data[2].length-2][i])})
+                d.push({'value': [parseInt(point), item], 'origin':item, 'processIndex':parseInt(data[2][data[2].length-2][i]), 'timestamp':data[2][data[2].length-3][i]})
               })
               categories = this.$common.arrayDuplicates(categories)
               option['yAxis'].push({
+                axisLabel: {
+                  textStyle:{
+                    fontSize: "6"
+                  },
+                },
                 type: 'category',
+                name: data[1],
+                nameTextStyle: {'fontSize':'8'},
+                position: 'right',
+                offset: 40 * yAxisIndex,
                 data: categories
               })
+              this.graphWidth = this.graphWidth + 100 * yAxisIndex
               yAxisIndex = yAxisIndex + 1
               option['series'].push(
                 {
@@ -579,7 +584,7 @@ export default {
                 var bit = parseInt(data[1].split('(r)')[1].replace('bit',''))
                 var hex2bin = this.$common.hex2bin(item)[31-bit]
                 globalPoints.push(point)
-                d.push({'value': [parseInt(point), hex2bin], 'origin':hex2bin, 'processIndex':parseInt(data[2][data[2].length-2][i])})
+                d.push({'value': [parseInt(point), hex2bin], 'origin':hex2bin, 'processIndex':parseInt(data[2][data[2].length-2][i]), 'timestamp':data[2][data[2].length-3][i]})
               })
               option['series'].push(
                 {
@@ -595,7 +600,7 @@ export default {
               items.forEach((item, i) => {
                 var point = data[2][data[2].length-1][i]
                 globalPoints.push(point)
-                d.push({'value': [parseInt(point), normalize[i][0]], 'origin':normalize[i][1], 'processIndex':parseInt(data[2][data[2].length-2][i])})
+                d.push({'value': [parseInt(point), normalize[i][0]], 'origin':normalize[i][1], 'processIndex':parseInt(data[2][data[2].length-2][i]), 'timestamp':data[2][data[2].length-3][i]})
               })
               option['series'].push(
                 {
@@ -618,6 +623,7 @@ export default {
       processes.forEach((process) => {
         var makeLineAxis = []
         var markLine = {
+          silent: true, // mouse move no event
           symbol: 'none',
           label:{
             // color:'#FFFFFF',
@@ -664,7 +670,22 @@ export default {
           }
         )
       })
+
+      option['tooltip']['formatter'] = function(params){
+        var ret = ''
+        params.forEach((param) => {
+          if((param['seriesName'].split('.')[0] != 'highlight')&(param.axisType != "yAxis.category")){
+            ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;" + param.seriesName + ":" + param.data.origin + '<br/>'
+          }
+        })
+        return ret;
+      }
       
+      var element = document.createElement("div")
+      element.setAttribute('id', "Sequential")
+      element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
+      document.getElementById('graphs').appendChild(element)
+      var chart = echarts.init(document.getElementById("Sequential"), 'dark')
       // bind click event and paint
       option['legend']['selected'] = unselect
       option['legend']['data'] = legend
@@ -673,9 +694,9 @@ export default {
       chart.on('click', function(params) {
         if(params['componentType'] != 'markLine'){
           that.numLine = params.data.processIndex
+          that.$common.removeAllChildDom('content')
           if(params.seriesName.split('.')[0] != that.process){
             that.process = params.seriesName.split('.')[0]
-            that.$common.removeAllChildDom('content')
             for (var i = 0; i < that.data.length; i++) {
               if(that.data[i]['process'] == that.process){
                 that.graphLogData = that.data[i]

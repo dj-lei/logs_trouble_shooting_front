@@ -1,5 +1,6 @@
 import urls from './urls'
 import axios from 'axios'
+import * as echarts from 'echarts'
 import * as d3 from 'd3'
 
 export default {
@@ -243,9 +244,20 @@ export default {
         },
         xAxis: {
           // type: 'category',
+          axisLabel: {
+            textStyle:{
+              fontSize: "10"
+            },
+          },
           data: []
         },
-        yAxis: {},
+        yAxis: {
+          axisLabel: {
+            textStyle:{
+              fontSize: "10"
+            },
+          },
+        },
         dataZoom: [
           {
             type: 'inside',
@@ -264,20 +276,23 @@ export default {
 
     createTreeSvg(data, svg, filterData){
       let that = this
-      const root = d3.hierarchy(data);
-      const dx = 10
-      const dy = 192
+
       const width = 1600
-      root.x0 = dy / 2;
-      root.y0 = 500;
-      
-      const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x)
-      const tree = d3.tree().nodeSize([dx, dy])
+      const dx = 10
+      const dy = width / 6
       const margin = ({top: 10, right: 120, bottom: 10, left: 40})
 
+      const diagonal = d3.linkHorizontal().x(d => d.y).y(d => d.x)
+      const root = d3.hierarchy(data);
+      const tree = d3.tree().nodeSize([dx, dy])
+      
+      root.x0 = dy / 2;
+      root.y0 = 0;
+      
       root.descendants().forEach((d, i) => {
         var name = [d.data.name.replace("(","").replace(")","")]
         var tmp = d
+        var flag = false
         while (tmp.parent != null) {
           name.push(tmp.parent.data.name.replace("(","").replace(")",""))
           tmp = tmp.parent
@@ -285,7 +300,21 @@ export default {
         name.reverse()
         d.id = name.join("__");
         d._children = d.children;
-        if (d.depth && d.data.name.length !== 7) d.children = null;
+
+        Object.keys(filterData).forEach((key) => {
+          if (key.includes(d.id)){
+            flag = true
+          }
+        })
+        if (flag == false){
+          if (d.depth !== 0) d.children = null;
+        }
+        
+        // if (Object.keys(filterData).includes(d.id)){
+        //   console.log(d.id)
+        // }else{
+        //   if (d.depth !== 0) d.children = null;
+        // }
       });
     
       // const svg = d3.create("svg")
@@ -301,8 +330,6 @@ export default {
       const gNode = svg.append("g")
           .attr("cursor", "pointer")
           .attr("pointer-events", "all");
-
-      // console.log(root)
     
       function update(source) {
         // const duration = d3.event && d3.event.altKey ? 2500 : 250;
@@ -439,6 +466,240 @@ export default {
       })
     },
 
+    createSequentialCompareGraph(graphs, graphHeight, graphWidth, highlightKeyword, filterData, router){
+      var processes = Object.keys(graphs).sort()
+      processes.forEach((process) => {
+        var row = document.createElement("div")
+        row.setAttribute('class', "row")
+
+        var name = document.createElement("div")
+        name.setAttribute('class', "name")
+        name.setAttribute('style', `height:${graphHeight}px;`)
+        name.innerHTML = process
+        
+        var graphRow = document.createElement("div")
+        graphRow.setAttribute('class', "graph-row")
+
+        row.appendChild(name)
+        row.appendChild(graphRow)
+        document.getElementById('graphs').appendChild(row)
+
+        Object.keys(graphs[process]).forEach((kv) => {
+          var option = this.getChartConfig()
+          var pack = {}
+          var categroies = []
+          graphs[process][kv].forEach((item) => {
+            
+            item[2].forEach((data, index) => {
+              if(index < item[2].length - 1){ // filter timestamp
+                if (!pack.hasOwnProperty(`${index}`)){
+                  pack[`${index}`] = []
+                }
+                if(item[4][1] == 'discrete'){
+                  categroies = this.arrayDuplicates(this.arrayExtend(categroies, data)).sort()
+                  option['yAxis'] = {
+                      axisLabel: {
+                        textStyle:{
+                          fontSize: "8"
+                        },
+                      },
+                      type: 'category', 
+                      data: categroies
+                    }
+                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
+                }else if(item[4][1] == 'register'){
+                  pack[`${index}`].push([item[0], data.map((v) => (this.hex2bin(v)[31-item[4][2]])), item[3], item[2][item[2].length-1], item[4][1]])
+                }else{
+                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
+                }
+              }
+            })
+          })
+
+          var items = Object.keys(pack).sort()
+          items.forEach((item, index) => {
+            if(index < items.length){
+              var graph = document.createElement("div")
+              graph.setAttribute('id', `${process}${kv}${index}`)
+              graph.setAttribute('style', `width:${graphWidth}px;height:${graphHeight}px;`)
+              graphRow.appendChild(graph)
+
+              var chart = echarts.init(document.getElementById(`${process}${kv}${index}`), 'dark')
+              option['title']['text'] = `${kv}_${index}`
+              option['series'] = []
+              option['tooltip']['formatter'] = function(params){
+                var ret = ''
+                params.forEach((param) => {
+                  ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;value:" + param.data.value + '<br/>'
+                })
+                return ret;
+              }
+              var legend = []
+              var count = []
+              pack[item].forEach((line) => {
+                legend.push(`${line[0]}`)
+                count.push(line[1].length)
+                // console.log(line[2]['data'].length > 0 ? line[2]['data'] : '')
+                option['series'].push(
+                  {
+                    name: `${line[0]}`,
+                    type: 'line',
+                    showSymbol: false,
+                    data: line[1].map((v, i) => ({'value': line[4] == 'discrete' ? v : parseFloat(v), 'timestamp': line[3][i]})),
+                    markLine: line[2]
+                  }
+                )
+              })
+
+              var list = [];
+              for (var i = 0; i < Math.max.apply(Math, count); i++) {
+                list.push(i);
+              }
+              option['legend']['data'] = legend
+              option['xAxis']['data'] = list
+              chart.setOption(option)
+              chart.on('click', function(params) {
+                if(params['componentType'] != 'markLine'){
+                  let routeData = router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(highlightKeyword), filterData:JSON.stringify(filterData)}});
+                  window.open(routeData.href, '_blank');
+                }
+              })
+            }
+          })
+        })
+      })
+    },
+
+    createStatisticsCompareGraph(graphs){
+      var res = {}
+      Object.keys(graphs).forEach((process) => {
+        Object.keys(graphs[process]).forEach((kv) => {
+          var items = graphs[process][kv]
+          items.forEach((item) => {
+            item[2].forEach((data, index) => {
+              if(index < item[2].length - 1){
+                var key = `${kv}.${index}`
+                if (!res.hasOwnProperty(item[0])){
+                  res[item[0]] = {}
+                }
+  
+                if (!res[item[0]].hasOwnProperty(key)){
+                  res[item[0]][key] = {}
+                }
+      
+                if (!res[item[0]][key].hasOwnProperty(process)){
+                  res[item[0]][key][process] = data
+                }
+              }
+            })
+          })
+        })
+      })
+
+      Object.keys(res).forEach((logIndex) => {
+        var row = document.createElement("div")
+        row.setAttribute('class', "row")
+        var name = document.createElement("div")
+        name.setAttribute('class', "name")
+        name.setAttribute('style', `height:800px;`)
+        name.innerHTML = logIndex
+        
+        var graphRow = document.createElement("div")
+        graphRow.setAttribute('class', "graph-row")
+
+        row.appendChild(name)
+        row.appendChild(graphRow)
+        document.getElementById('graphs').appendChild(row)
+
+        Object.keys(res[logIndex]).forEach((key) => {
+          const title = [];
+          const singleAxis = [];
+          const series = [];
+          Object.keys(res[logIndex][key]).forEach((process, idx) => {
+            title.push({
+              textBaseline: 'middle',
+              top: ((idx + 0.5) * 100) / 7 + '%',
+              text: process+'/'+key
+            });
+            if(key.includes('(d)')){
+              singleAxis.push({
+                left: 150,
+                type: 'category',
+                boundaryGap: false,
+                data: this.arrayDuplicates(res[logIndex][key][process]),
+                top: (idx * 100) / 7 + 5 + '%',
+                height: 100 / 7 - 10 + '%',
+                axisLabel: {
+                  interval: 2
+                }
+              });
+            }else{
+              singleAxis.push({
+                left: 150,
+                type: 'value',
+                boundaryGap: false,
+                top: (idx * 100) / 7 + 5 + '%',
+                height: 100 / 7 - 10 + '%',
+                axisLabel: {
+                  interval: 2
+                }
+              });
+            }
+
+            if(key.includes('(r)')){
+              var bit = parseInt(key.split('(r)')[1].replace('_bit', '') )
+              series.push({
+                singleAxisIndex: idx,
+                coordinateSystem: 'singleAxis',
+                type: 'scatter',
+                data: res[logIndex][key][process].map((v) => parseInt(this.hex2bin(v)[31-bit])),
+                // symbolSize: function (dataItem) {
+                //   return dataItem[1] * 4;
+                // }
+              })
+            }else if(key.includes('(d)')){
+              series.push({
+                singleAxisIndex: idx,
+                coordinateSystem: 'singleAxis',
+                type: 'scatter',
+                data: res[logIndex][key][process],
+                // symbolSize: function (dataItem) {
+                //   return dataItem[1] * 4;
+                // }
+              })
+            }else{
+              series.push({
+                singleAxisIndex: idx,
+                coordinateSystem: 'singleAxis',
+                type: 'scatter',
+                data: res[logIndex][key][process].map((v) => parseFloat(v)),
+                symbolSize: function (dataItem) {
+                  // console.log(dataItem)
+                  return dataItem * 4;
+                }
+              })
+            }
+          })
+          // console.log(title, singleAxis, series)
+          var option = {
+            tooltip: {
+              position: 'top'
+            },
+            title: title,
+            singleAxis: singleAxis,
+            series: series
+          };
+          var graph = document.createElement("div")
+          graph.setAttribute('id', `${logIndex}${key}`)
+          graph.setAttribute('style', `width:1200px;height:800px;`)
+          graphRow.appendChild(graph)
+
+          var chart = echarts.init(document.getElementById(`${logIndex}${key}`), 'dark')
+          chart.setOption(option)
+        })
+      })
+    },
+
     zip(x, y){
       return Array(Math.max(x.length, y.length)).fill().map((_,i) => [x[i], y[i]]);
     },
@@ -549,6 +810,14 @@ export default {
       })
       res['children'] = indices
       return res
+    },
+
+    exportJosnToLocalTxt(content, fileName){
+      var a = document.createElement("a");
+      var file = new Blob([JSON.stringify(content)], {type: 'text/plain'});
+      a.href = URL.createObjectURL(file);
+      a.download = fileName;
+      a.click();
     },
 
     startLoading(){

@@ -5,6 +5,9 @@
         a(class="go" @click="go") GO
         a(class="func" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="func" @click="openHighlightModal") Highlight
+        a(class="func" @click="exportConfig") ExportConfig
+        a(class="func" @click="loadConfig") LoadConfig
+        input(id="fileInput" type="file" style="display:none")
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
@@ -43,15 +46,7 @@ export default {
       svg:'',
       zoom:'',
       index:[''],
-      filterData: {
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__TxBranchCtrlB__eventd:['TxBranchCtrlB', 'event(d)'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmac: ['txlProcBranchH', 'Pma(c)'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__Pmbc: ['txlProcBranchH', 'Pmb(c)'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit10: ['txlProcBranchH', 'dpd(r)bit10'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit11: ['txlProcBranchH', 'dpd(r)bit11'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__dpdr__bit12: ['txlProcBranchH', 'dpd(r)bit12'],
-        // KeyWords__visby_6626_dcgm_xiaobo_glt_sukamulya_cbn_cm_bxp_2051_telog__txlProcBranchH__txAttc: ['txlProcBranchH', 'txAtt(c)']
-      },
+      filterData: {},
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
       graphHeight: 200,
       graphWidth: 550,
@@ -102,6 +97,19 @@ export default {
         document.getElementById("keywords-modal").style.display = "none";
       }
     }
+
+    document.getElementById('fileInput').onchange = function (event) {
+      var reader = new FileReader();
+      reader.onload = onReaderLoad;
+      reader.readAsText(event.target.files[0]);
+    }
+    function onReaderLoad(event){
+      var obj = JSON.parse(event.target.result);
+      that.filterData = obj.filterData
+      that.highlightKeyword = obj.highlightKeyword
+      d3.select(`#canvas`).remove()
+      that.createKeyWordsTreeGraph()
+    } 
   },
   methods: {
     async getKeyValues (index) {
@@ -174,105 +182,15 @@ export default {
           })
         })
       })
-      
-      var processes = Object.keys(graphs).sort()
-      processes.forEach((process) => {
-        var row = document.createElement("div")
-        row.setAttribute('class', "row")
-
-        var name = document.createElement("div")
-        name.setAttribute('class', "name")
-        name.setAttribute('style', `height:${this.graphHeight}px;`)
-        name.innerHTML = process
-        
-        var graphRow = document.createElement("div")
-        graphRow.setAttribute('class', "graph-row")
-
-        row.appendChild(name)
-        row.appendChild(graphRow)
-        document.getElementById('graphs').appendChild(row)
-
-        Object.keys(graphs[process]).forEach((kv) => {
-          var option = this.$common.getChartConfig()
-          var pack = {}
-          var categroies = []
-          graphs[process][kv].forEach((item) => {
-            
-            item[2].forEach((data, index) => {
-              if(index < item[2].length - 1){ // filter timestamp
-                if (!pack.hasOwnProperty(`${index}`)){
-                  pack[`${index}`] = []
-                }
-                if(item[4][1] == 'discrete'){
-                  categroies = this.$common.arrayDuplicates(this.$common.arrayExtend(categroies, data)).sort()
-                  option['yAxis'] = {'type': 'category', 'data': categroies}
-                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
-                }else if(item[4][1] == 'register'){
-                  pack[`${index}`].push([item[0], data.map((v) => (this.$common.hex2bin(v)[31-item[4][2]])), item[3], item[2][item[2].length-1], item[4][1]])
-                }else{
-                  pack[`${index}`].push([item[0], data, item[3], item[2][item[2].length-1], item[4][1]])
-                }
-              }
-            })
-          })
-
-          var items = Object.keys(pack).sort()
-          items.forEach((item, index) => {
-            if(index < items.length){
-              var graph = document.createElement("div")
-              graph.setAttribute('id', `${process}${kv}${index}`)
-              graph.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-              graphRow.appendChild(graph)
-
-              var chart = echarts.init(document.getElementById(`${process}${kv}${index}`), 'dark')
-              option['title']['text'] = `${kv}_${index}`
-              option['series'] = []
-              option['tooltip']['formatter'] = function(params){
-                var ret = ''
-                params.forEach((param) => {
-                  ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;value:" + param.data.value + '<br/>'
-                })
-                return ret;
-              }
-              var legend = []
-              var count = []
-              pack[item].forEach((line) => {
-                legend.push(`${line[0]}`)
-                count.push(line[1].length)
-                // console.log(line[2]['data'].length > 0 ? line[2]['data'] : '')
-                option['series'].push(
-                  {
-                    name: `${line[0]}`,
-                    type: 'line',
-                    showSymbol: false,
-                    data: line[1].map((v, i) => ({'value': line[4] == 'discrete' ? v : parseFloat(v), 'timestamp': line[3][i]})),
-                    markLine: line[2]
-                  }
-                )
-              })
-
-              var list = [];
-              for (var i = 0; i < Math.max.apply(Math, count); i++) {
-                list.push(i);
-              }
-              option['legend']['data'] = legend
-              option['xAxis']['data'] = list
-              chart.setOption(option)
-              chart.on('click', function(params) {
-                if(params['componentType'] != 'markLine'){
-                  let routeData = that.$router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(that.highlightKeyword), filterData:JSON.stringify(that.filterData)}});
-                  window.open(routeData.href, '_blank');
-                }
-              })
-            }
-          })
-        })
-      })
+      this.$common.createSequentialCompareGraph(graphs, this.graphHeight, this.graphWidth, this.highlightKeyword, this.filterData, this.$router)
+      // this.$common.createStatisticsCompareGraph(graphs)
     },
     createKeyWordsTreeGraph(){
       this.svg = d3.select(`#viz`).append("g")
               .attr("id", "canvas")
-              .style("font", "8px sans-serif");
+              .style("font", "10px sans-serif")
+            .append("g")
+              .attr("transform", `translate(0,400)`)
       this.resetCoordinates()
       this.$common.createTreeSvg(this.keyWordsTree, this.svg, this.filterData)
     },
@@ -301,6 +219,15 @@ export default {
     closeKeyWordsTreeModal(){
       var modal = document.getElementById("keywords-modal")
       modal.style.display = "none"
+    },
+    exportConfig(){
+      var res = {}
+      res['filterData'] = this.filterData
+      res['highlightKeyword'] = this.highlightKeyword
+      this.$common.exportJosnToLocalTxt(res, 'config.txt')
+    },
+    loadConfig(){
+      document.getElementById('fileInput').click()
     },
     newHighlightItem(){
       let that = this
