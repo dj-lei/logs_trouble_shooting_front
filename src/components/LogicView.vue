@@ -866,7 +866,7 @@ html,body {
   height: 100%;
   width: 0;
   position: fixed;
-  z-index: 1;
+  z-index: 0;
   top: 0;
   left: 0;
   background-color: rgb(0, 0, 0);
@@ -878,7 +878,7 @@ html,body {
   height: 100%;
   width: 0;
   position: fixed;
-  z-index: 1;
+  z-index: 0;
   top: 0;
   left: 0;
   background-color: rgb(0, 0, 0);
@@ -898,7 +898,7 @@ html,body {
 .overlay-content .navbar {
   display: none;
   position: fixed;
-  z-index: 2;
+  z-index: 1;
   overflow: hidden;
   background-color: #555; /* Black background color */
   top: 0; /* Stay on top */
@@ -1022,7 +1022,7 @@ th, td {
 .keywords-modal {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
-  z-index: 3; /* Sit on top */
+  z-index: 1; /* Sit on top */
   left: 0;
   top: 0;
   width: 100%; /* Full width */
@@ -1046,7 +1046,7 @@ th, td {
 .modal {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
-  z-index: 3; /* Sit on top */
+  z-index: 1; /* Sit on top */
   left: 0;
   top: 0;
   width: 100%; /* Full width */
