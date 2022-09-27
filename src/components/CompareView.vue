@@ -287,7 +287,7 @@ html,body {
 .compare-view-full-height {
   position: sticky !important;
   height: 100%;
-  overflow-y: hidden !important;
+  /* overflow-y: hidden !important; */
 }
 
 .compare-view-topnav {

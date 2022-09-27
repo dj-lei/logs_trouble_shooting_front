@@ -123,23 +123,25 @@ export default {
         elementLeft.setAttribute('id', index)
         elementLeft.innerText = index
         elementLeft.onclick = function(){
-          var elementRight = document.createElement("li")
-          elementRight.setAttribute('id', index)
-          elementRight.innerText = index
+          if (!document.getElementById("groups2").hasChildNodes()) {
+            var elementRight = document.createElement("li")
+            elementRight.setAttribute('id', index)
+            elementRight.innerText = index
 
-          var span = document.createElement("SPAN");
-          var txt = document.createTextNode("\u00D7");
-          span.className = "close-list";
-          span.appendChild(txt);
-          elementRight.appendChild(span);
-          document.getElementById("groups2").appendChild(elementRight)
+            var span = document.createElement("SPAN");
+            var txt = document.createTextNode("\u00D7");
+            span.className = "close-list";
+            span.appendChild(txt);
+            elementRight.appendChild(span);
+            document.getElementById("groups2").appendChild(elementRight)
 
-          var close = document.getElementsByClassName("close-list");
-          for (var i = 0; i < close.length; i++) {
-            close[i].onclick = function() {
-              let p = this.parentElement
-              this.parentElement.removeChild(this)
-              p.parentElement.removeChild(p);
+            var close = document.getElementsByClassName("close-list");
+            for (var i = 0; i < close.length; i++) {
+              close[i].onclick = function() {
+                let p = this.parentElement
+                this.parentElement.removeChild(this)
+                p.parentElement.removeChild(p);
+              }
             }
           }
         }

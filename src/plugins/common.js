@@ -289,6 +289,7 @@ export default {
       root.x0 = dy / 2;
       root.y0 = 0;
       
+      var originKeys = Object.keys(filterData)
       root.descendants().forEach((d, i) => {
         var name = [d.data.name.replace("(","").replace(")","")]
         var tmp = d
@@ -297,25 +298,30 @@ export default {
           name.push(tmp.parent.data.name.replace("(","").replace(")",""))
           tmp = tmp.parent
         }
+        var process_key_name = name.slice(0, name.length-2)
+        process_key_name.reverse()
+        process_key_name = process_key_name.join("__")
+
         name.reverse()
         d.id = name.join("__");
         d._children = d.children;
 
-        Object.keys(filterData).forEach((key) => {
-          if (key.includes(d.id)){
+        originKeys.forEach((key) => {
+          var tmp2 = key.split('__').slice(2, key.split('__').length).join('__')
+          if (key.includes(process_key_name)){
             flag = true
+            if (tmp2 == process_key_name){
+              filterData[d.id] = filterData[key]
+            }
           }
         })
         if (flag == false){
           if (d.depth !== 0) d.children = null;
         }
-        
-        // if (Object.keys(filterData).includes(d.id)){
-        //   console.log(d.id)
-        // }else{
-        //   if (d.depth !== 0) d.children = null;
-        // }
       });
+      originKeys.forEach((key) => {
+        delete filterData[key]
+      })
     
       // const svg = d3.create("svg")
       //     .attr("viewBox", [-margin.left, -margin.top, width, dx])

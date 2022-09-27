@@ -124,8 +124,8 @@ export default {
     this.kv = url.get('kv')
     this.dataIndex = url.get('dataIndex')
     this.highlightKeyword = JSON.parse(url.get('highlightKeyword'))
-    this.filterGraphs = JSON.parse(url.get('filterData')) 
-
+    this.filterGraphs = JSON.parse(url.get('filterData'))
+    // console.log(this.filterGraphs)
     // document.getElementById("filter-input").value = this.filterGraphs.join(",")
 
     Object.keys(this.highlightKeyword).forEach((key) => {
@@ -508,6 +508,9 @@ export default {
     },
     openSequentialGraphDetail() {
       let that = this
+
+      var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
+      this.filterGraphs = JSON.parse(url.get('filterData'))
       this.$common.removeAllChildDom("graphs")
 
       var graphs = []
@@ -521,14 +524,15 @@ export default {
         }else{
           tmp = item[1]
         }
+        console.log(k)
         if ((this.dataTree.hasOwnProperty(item[0]))&(this.dataTree[item[0]].hasOwnProperty(tmp))){
           // [process, key, [value, timestamp, processindex, globalindex]]
+          
           graphs.push([item[0], item[1], this.dataTree[item[0]][tmp]])
           processes.push(item[0])
         }
       })
       processes = this.$common.arrayDuplicates(processes)
-      
       // package line
       var option = this.$common.getChartConfig()
 
