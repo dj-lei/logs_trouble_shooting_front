@@ -184,6 +184,9 @@ export default {
           this.devices = Object.keys(this.allData)
           this.data = this.allData[this.devices[0]]
 
+          var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
+          this.filterGraphs = JSON.parse(url.get('filterData'))
+
           var keywords = {}
           var processes = {}
           keywords[index] = {}
@@ -508,9 +511,6 @@ export default {
     },
     openSequentialGraphDetail() {
       let that = this
-
-      var url = new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`)
-      this.filterGraphs = JSON.parse(url.get('filterData'))
       this.$common.removeAllChildDom("graphs")
 
       var graphs = []
