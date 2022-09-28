@@ -61,7 +61,10 @@ export default {
     this.scheduled()
     document.getElementById('fileInput').onchange = function () {
       // document.getElementById('submit').disabled = false
-      that.submit()
+      var file = document.getElementById("fileInput").files
+      if (file.length > 0) {
+        that.submit()
+      }
     };
 
     // window.onclick = function(event) {
@@ -216,11 +219,8 @@ export default {
         (response)=>{
         this.$common.stopLoading()
       }, (error) => {
-        this.errorInfo = 'Wrong file format or Too large!'
-        this.errorShown = true
-        setTimeout(() =>{
-          this.errorShown = false
-        },4000)
+        alert("Log File Format ERROR or Not Support Currently!");
+        this.$common.stopLoading()
       })
     },
     go() {
