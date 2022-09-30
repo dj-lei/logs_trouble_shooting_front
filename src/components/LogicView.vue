@@ -17,12 +17,26 @@
       div(class="keywords-modal-content")
         //- div(id="keywords-graph" style="width:3000px;height:750px;")
         svg(id="keywords" width="1600" height="800")
-    //- div(id="filter-modal" class="modal")
-    //-   div(class="modal-content")
-    //-     div(class="modal-header")
-    //-       h2 Filter Keywords Graph
-    //-       input(style="width: 100%;" class="modal-input-text" type="text" id="filter-input" placeholder="Keyword1,Keyword2,Keyword3...")
-          //- v-on:scroll="scrollLogDetail"
+
+    div(id="legend-config-modal" class="modal")
+      div(class="modal-content")
+        div(id="legend-config" class="modal-header")
+          h2 Legend Config
+          //- span(class="row")
+          //-   input(type="checkbox")
+          //-   label(class="checkbox") process1
+          //-   input(type="radio" name="radio" value="right")
+          //-   label LeftAxis
+          //-   input(type="radio" name="radio" value="right")
+          //-   label RightAxis
+          //- span(class="row")
+          //-   input(type="checkbox")
+          //-   label(class="checkbox") process2
+          //-   input(type="radio" name="radio" value="right")
+          //-   label LeftAxis
+          //-   input(type="radio" name="radio" value="right")
+          //-   label RightAxis
+
     div(id="log-detail" class="overlay")
       div(class="overlay-content")
         div(id="log-detail-navbar" class="navbar")
@@ -97,6 +111,8 @@ export default {
       yAxis:'',
       xAxis:'',
 
+      selectedLegend: {},
+
       graphHeight: 800,
       graphWidth: 1000,
     }
@@ -168,6 +184,10 @@ export default {
       }else if(event.target == document.getElementById("keywords-modal")){
         that.openLogDetail(that.numLine, true)
         document.getElementById("keywords-modal").style.display = "none";
+      }else if(event.target == document.getElementById("legend-config-modal")){
+        document.getElementById("legend-config-modal").style.display = "none";
+        that.filterLegend()
+        that.openLogDetail(that.numLine, true)
       }
     }
 
@@ -470,7 +490,7 @@ export default {
           Object.keys(this.highlightKeyword).forEach((item) => {
             item.split(/,/).forEach((key) => {
               if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
-                if (this.invertedIndexTable[key]['x'].includes(num)){
+                if (this.invertedIndexTable[key.toLowerCase()]['x'].includes(num)){
                   td.style.color = this.highlightKeyword[item]
                 }  
               }
@@ -513,10 +533,13 @@ export default {
       let that = this
       this.$common.removeAllChildDom("graphs")
 
+      var isFullScreen = false
       var graphs = []
       var processes = []
+
       // extrac need line
-      Object.keys(this.filterGraphs).forEach((k) => {
+      var intersection = this.$common.arrayIntersection(Object.keys(this.filterGraphs), Object.keys(this.selectedLegend))
+      intersection.forEach((k) => {
         var item = this.filterGraphs[k]
         var tmp = ''
         if (item[1].includes('(r)')) {
@@ -535,7 +558,6 @@ export default {
       processes = this.$common.arrayDuplicates(processes)
       // package line
       var option = this.$common.getChartConfig()
-
       option['title']['text'] = "Sequential"
       option['series'] = []
       option['yAxis'] = [
@@ -549,6 +571,24 @@ export default {
         data[2].forEach((items, index) => {
           if(index < data[2].length-3){
             var d = []
+            // config Yaxis
+            option['yAxis'].push({
+              axisLabel: {
+                textStyle:{
+                  fontSize: "6"
+                },
+              },
+              type: 'category',
+              name: `${data[0]}.${data[1]}.${index}`,
+              nameTextStyle: {'fontSize':'8'},
+              position: 'right',
+              offset: 40 * yAxisIndex,
+              data: categories
+            })
+            this.graphWidth = this.graphWidth + 100 * yAxisIndex
+            yAxisIndex = yAxisIndex + 1
+
+            // package data
             if (data[1].includes('(d)')){
               var categories = []
               items.forEach((item, i) => {
@@ -558,21 +598,6 @@ export default {
                 d.push({'value': [parseInt(point), item], 'origin':item, 'processIndex':parseInt(data[2][data[2].length-2][i]), 'timestamp':data[2][data[2].length-3][i]})
               })
               categories = this.$common.arrayDuplicates(categories)
-              option['yAxis'].push({
-                axisLabel: {
-                  textStyle:{
-                    fontSize: "6"
-                  },
-                },
-                type: 'category',
-                name: data[1],
-                nameTextStyle: {'fontSize':'8'},
-                position: 'right',
-                offset: 40 * yAxisIndex,
-                data: categories
-              })
-              this.graphWidth = this.graphWidth + 100 * yAxisIndex
-              yAxisIndex = yAxisIndex + 1
               option['series'].push(
                 {
                   name: `${data[0]}.${data[1]}.${index}`,
@@ -651,7 +676,7 @@ export default {
                 }
               }
 
-              var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key]['x'], Object.keys(processData.msg))
+              var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key.toLowerCase()]['x'], Object.keys(processData.msg))
               if (intersec.length > 0){
                 intersec.forEach((elm) => {
                   // var pos = d3.bisect(globalPoints.map(v => {return parseInt(v)}), parseInt(elm));
@@ -690,10 +715,50 @@ export default {
       element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
       document.getElementById('graphs').appendChild(element)
       var chart = echarts.init(document.getElementById("Sequential"), 'dark')
+      
+      this.createLegendConfigModal(unselect)
       // bind click event and paint
       option['legend']['selected'] = unselect
       option['legend']['data'] = legend
       option['xAxis']['type'] = 'value'
+      // install tool button 
+      option['toolbox']['feature'] = {
+        myTool2:{
+          show:true,
+          title: 'Edit',
+          icon: 'path://M499.2 281.6l243.2 243.2L413.866667 853.333333H170.666667v-243.2l328.533333-328.533333z m0 123.733333L256 648.533333V768h119.466667l243.2-243.2-119.466667-119.466667zM614.4 170.666667L853.333333 413.866667l-72.533333 72.533333-243.2-243.2L614.4 170.666667z',
+          onclick: (e) =>{
+            console.log(e)
+            var modal = document.getElementById("legend-config-modal")
+            modal.style.display = "block"
+          }
+        },
+        myTool1:{
+          show:true,
+          title: 'Zoom Out',
+          icon: 'path://M395.731085 571.196755l10.18176 10.18176q4.072704 4.072704 8.145408 7.63632t8.145408 7.63632l12.218112 12.218112q20.363521 20.363521 16.290817 35.636161t-25.454401 35.636161q-9.163584 10.18176-30.036193 31.054369t-44.799745 45.308833-46.32701 46.836098-34.617985 35.636161q-18.327169 18.327169-25.454401 32.072545t6.109056 26.981665q9.163584 9.163584 23.418049 24.436225t24.436225 25.454401q17.308993 17.308993 12.7272 30.545281t-30.036193 15.27264q-26.472577 3.054528-59.05421 7.127232t-67.199618 7.63632-67.708706 7.63632-60.581474 7.127232q-26.472577 3.054528-36.654337-6.618144t-8.145408-34.108897q2.036352-25.454401 5.599968-57.017858t7.63632-64.654178 7.63632-65.672354 6.618144-60.072386q3.054528-29.527105 16.799905-37.672513t31.054369 9.163584q10.18176 10.18176 26.472577 24.945313t27.490753 25.963489 21.381697 7.127232 23.418049-16.290817q13.236288-13.236288 36.145249-36.654337t47.854274-48.363362 48.363362-48.87245 37.672513-38.181601q6.109056-6.109056 13.745376-11.709024t16.799905-7.63632 18.836257 1.018176 20.872609 13.236288zM910.928158 58.036034q26.472577-3.054528 36.654337 6.618144t8.145408 34.108897q-2.036352 25.454401-5.599968 57.017858t-7.63632 64.654178-7.63632 66.181442-6.618144 60.581474q-3.054528 29.527105-16.799905 37.163425t-31.054369-9.672672q-10.18176-10.18176-27.999841-26.472577t-29.018017-27.490753-19.345345-9.672672-20.363521 13.745376q-14.254464 14.254464-37.163425 37.672513t-48.363362 49.381538-49.890626 50.399714l-37.672513 37.672513q-6.109056 6.109056-13.236288 12.218112t-15.781729 9.163584-18.327169 1.018176-19.854433-13.236288l-38.690689-38.690689q-20.363521-20.363521-17.818081-37.163425t22.908961-37.163425q9.163584-9.163584 30.545281-31.054369t45.817921-46.32701 47.345186-47.854274 36.145249-35.636161q18.327169-18.327169 22.908961-30.036193t-8.654496-24.945313q-9.163584-9.163584-21.890785-22.399873t-22.908961-23.418049q-17.308993-17.308993-12.7272-30.545281t30.036193-16.290817 58.545122-7.127232 67.708706-7.63632 67.708706-7.63632 60.581474-7.127232z',
+          onclick: (e) =>{
+            if(isFullScreen == false){
+              
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth}px;height:${document.body.offsetHeight - 20}px;`)
+              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth})
+              
+              isFullScreen = true
+              document.getElementById("graph-detail").style.left = "0%"
+              document.getElementById("graph-detail").style.width = "100%"
+            }else{
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth / 2}px;height:${document.body.offsetHeight - 20}px;`)
+              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth / 2})
+ 
+              isFullScreen = false
+              document.getElementById("graph-detail").style.left = "50%"
+              document.getElementById("graph-detail").style.width = "50%"
+            }
+
+          }
+        },
+      }
+      
       chart.setOption(option)
       chart.on('click', function(params) {
         if(params['componentType'] != 'markLine'){
@@ -721,6 +786,67 @@ export default {
       document.getElementById("graph-detail").style.left = "50%"
       document.getElementById("graph-detail").style.width = "50%"
     },
+    createLegendConfigModal(unselect){
+      let that = this
+      Object.keys(unselect).forEach((key) => {
+        var form = document.createElement("form")
+        form.setAttribute('name', key)
+
+        var span = document.createElement("span")
+        span.setAttribute('class', "row")
+
+        var inputCheckBox = document.createElement("input")
+        inputCheckBox.setAttribute('type', "checkbox")
+        inputCheckBox.setAttribute('class', "left")
+        inputCheckBox.onclick = function() {
+          if (that.selectedLegend.hasOwnProperty(key)) {
+            delete that.selectedLegend[key]
+          }else{
+            that.selectedLegend[key] = {}
+          }
+        }
+
+        var labelProcess = document.createElement("label")
+        labelProcess.setAttribute('class', "left")
+        labelProcess.innerHTML = key
+
+        var leftAxisRadio = document.createElement("input")
+        leftAxisRadio.setAttribute('type', "radio")
+        leftAxisRadio.setAttribute('name', key)
+        leftAxisRadio.setAttribute('value', "left")
+        leftAxisRadio.setAttribute('class', "right")
+
+        var leftAxisLabel = document.createElement("label")
+        leftAxisLabel.setAttribute('class', "right")
+        leftAxisLabel.innerHTML = "LeftAxis"
+
+        var rightAxisRadio = document.createElement("input")
+        rightAxisRadio.setAttribute('type', "radio")
+        rightAxisRadio.setAttribute('name', key)
+        rightAxisRadio.setAttribute('value', "right")
+        rightAxisRadio.setAttribute('class', "right")
+        rightAxisRadio.setAttribute('checked', "checked")
+
+        var rightAxisLabel = document.createElement("label")
+        rightAxisLabel.setAttribute('class', "right")
+        rightAxisLabel.innerHTML = "RightAxis"
+
+        span.appendChild(inputCheckBox)
+        span.appendChild(labelProcess)
+        span.appendChild(leftAxisRadio)
+        span.appendChild(leftAxisLabel)
+        span.appendChild(rightAxisRadio)
+        span.appendChild(rightAxisLabel)
+        form.appendChild(span)
+        document.getElementById('legend-config')
+          .appendChild(form)
+      })
+    },
+    filterLegend(){
+      Object.keys(this.selectedLegend).forEach((key) => {
+        this.selectedLegend[key] = document[key][key].value
+      })
+    },
     exportExcel(){
       var res = {}
       var item = {}
@@ -732,7 +858,7 @@ export default {
       Object.keys(item).forEach((line) => {
         this.allLine[line].forEach((e) => {
           var tmp = {}
-          tmp['GlobalIndex'] = e.value[0]
+          tmp['timestamp'] = e.timestamp
           Object.keys(item).forEach((k) => {
             tmp[k] = null
           })
@@ -743,7 +869,7 @@ export default {
           res[e.value[0]] = tmp
         })
       })
-      var str =  "GlobalIndex,"+Object.keys(item).join(",")+"\n"
+      var str =  "timestamp,"+Object.keys(item).join(",")+"\n"
       // var nums = Object.keys(res).map(v => {return parseInt(v)}).sort()
       var exportData = []
       Object.keys(res).forEach((num) => {
@@ -1051,6 +1177,7 @@ th, td {
   top: 0;
   width: 100%; /* Full width */
   height: 100%; /* Full height */
+  overflow: auto;
   /* overflow: auto; Enable scroll if needed */
   /* background-color: rgb(0,0,0); Fallback color */
   /* background-color: rgba(0,0,0,0.4); Black w/ opacity */
@@ -1171,5 +1298,21 @@ ul li:hover {
 .close-list:hover {
   background-color: #f44336;
   color: white;
+}
+
+.row {
+  width: 100%;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.row .left {
+  float: left;
+  /* margin-right: 300px; */
+}
+
+.row .right {
+  float: right;
+  /* margin-right: 300px; */
 }
 </style>

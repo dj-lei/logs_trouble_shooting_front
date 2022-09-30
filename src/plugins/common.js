@@ -208,7 +208,10 @@ export default {
           text: 'Stacked Line'
         },
         // backgroundColor:'#3F3F3F',
-        // toolbox:{show:true,feature:{dataView:{show:true}}},
+        toolbox:{
+          feature:{
+          }
+        },
         tooltip: {
           trigger: 'axis',
           show: true,
@@ -223,13 +226,13 @@ export default {
             return ret;
             
           },
-          feature: {
-            saveAsImage: {
-              show: true,
-              excludeComponents: ['toolbox'],
-              pixelRatio: 2
-            }
-          }
+          // feature: {
+          //   saveAsImage: {
+          //     show: true,
+          //     excludeComponents: ['toolbox'],
+          //     pixelRatio: 2
+          //   }
+          // }
         },
         legend: {
           data: [],
@@ -473,6 +476,10 @@ export default {
     },
 
     createSequentialCompareGraph(graphs, graphHeight, graphWidth, highlightKeyword, filterData, router){
+      document.getElementById("full-graph").setAttribute('style', `width:${document.body.offsetWidth}px;height:${document.body.offsetHeight}px;`)
+      var ins = echarts.init(document.getElementById("full-graph"), 'dark')
+      var isFullScreen = false
+
       var processes = Object.keys(graphs).sort()
       processes.forEach((process) => {
         var row = document.createElement("div")
@@ -563,6 +570,35 @@ export default {
               }
               option['legend']['data'] = legend
               option['xAxis']['data'] = list
+              option['toolbox']['feature'] = {
+                myTool1:{
+                  show:true,
+                  title: 'Zoom Out',
+                  icon: 'path://M395.731085 571.196755l10.18176 10.18176q4.072704 4.072704 8.145408 7.63632t8.145408 7.63632l12.218112 12.218112q20.363521 20.363521 16.290817 35.636161t-25.454401 35.636161q-9.163584 10.18176-30.036193 31.054369t-44.799745 45.308833-46.32701 46.836098-34.617985 35.636161q-18.327169 18.327169-25.454401 32.072545t6.109056 26.981665q9.163584 9.163584 23.418049 24.436225t24.436225 25.454401q17.308993 17.308993 12.7272 30.545281t-30.036193 15.27264q-26.472577 3.054528-59.05421 7.127232t-67.199618 7.63632-67.708706 7.63632-60.581474 7.127232q-26.472577 3.054528-36.654337-6.618144t-8.145408-34.108897q2.036352-25.454401 5.599968-57.017858t7.63632-64.654178 7.63632-65.672354 6.618144-60.072386q3.054528-29.527105 16.799905-37.672513t31.054369 9.163584q10.18176 10.18176 26.472577 24.945313t27.490753 25.963489 21.381697 7.127232 23.418049-16.290817q13.236288-13.236288 36.145249-36.654337t47.854274-48.363362 48.363362-48.87245 37.672513-38.181601q6.109056-6.109056 13.745376-11.709024t16.799905-7.63632 18.836257 1.018176 20.872609 13.236288zM910.928158 58.036034q26.472577-3.054528 36.654337 6.618144t8.145408 34.108897q-2.036352 25.454401-5.599968 57.017858t-7.63632 64.654178-7.63632 66.181442-6.618144 60.581474q-3.054528 29.527105-16.799905 37.163425t-31.054369-9.672672q-10.18176-10.18176-27.999841-26.472577t-29.018017-27.490753-19.345345-9.672672-20.363521 13.745376q-14.254464 14.254464-37.163425 37.672513t-48.363362 49.381538-49.890626 50.399714l-37.672513 37.672513q-6.109056 6.109056-13.236288 12.218112t-15.781729 9.163584-18.327169 1.018176-19.854433-13.236288l-38.690689-38.690689q-20.363521-20.363521-17.818081-37.163425t22.908961-37.163425q9.163584-9.163584 30.545281-31.054369t45.817921-46.32701 47.345186-47.854274 36.145249-35.636161q18.327169-18.327169 22.908961-30.036193t-8.654496-24.945313q-9.163584-9.163584-21.890785-22.399873t-22.908961-23.418049q-17.308993-17.308993-12.7272-30.545281t30.036193-16.290817 58.545122-7.127232 67.708706-7.63632 67.708706-7.63632 60.581474-7.127232z',
+                  onclick: (e) =>{
+                    if(isFullScreen == false){
+                      let props = echarts.getInstanceByDom(document.getElementById(`${process}${kv}${index}`))
+                      ins.setOption(props.getOption())
+  
+                      ins.on('click', function(params) {
+                        if(params['componentType'] != 'markLine'){
+                          let routeData = router.resolve({path: '/logicview', query:{index: params['seriesName'], process: process, kv: kv, dataIndex: params['dataIndex'], highlightKeyword:JSON.stringify(highlightKeyword), filterData:JSON.stringify(filterData)}});
+                          window.open(routeData.href, '_blank');
+                        }
+                      })
+                      
+                      isFullScreen = true
+                      var modal = document.getElementById("full-graph-modal")
+                      modal.style.display = "block"
+                    }else{
+                      isFullScreen = false
+                      var modal = document.getElementById("full-graph-modal")
+                      modal.style.display = "none"
+                    }
+
+                  }
+                },
+              }
               chart.setOption(option)
               chart.on('click', function(params) {
                 if(params['componentType'] != 'markLine'){
@@ -576,7 +612,7 @@ export default {
       })
     },
 
-    createStatisticsCompareGraph(graphs){
+    createStatisticsCompareGraph(graphs, bisection){
       var res = {}
       Object.keys(graphs).forEach((process) => {
         Object.keys(graphs[process]).forEach((kv) => {
@@ -594,20 +630,65 @@ export default {
                 }
       
                 if (!res[item[0]][key].hasOwnProperty(process)){
-                  res[item[0]][key][process] = data
+                  var statistics = {}
+                  var count = data.length
+                  if(key.includes('(c)')){ 
+                    var tmp = data.map((v) => parseFloat(v))
+                    var max = Math.max.apply(Math, tmp)
+                    var min = Math.min.apply(Math, tmp)
+                    var interval = (max - min) / bisection
+                    var elms = [...Array(bisection * 2).keys()]
+                    elms.forEach((v) => {
+                      statistics[v] = 0
+                    })
+                    tmp.map((v) => {
+                      if (parseInt((v-min)/interval) == bisection) {
+                        var k = (parseInt((v-min)/interval) - 1) * 2
+                        statistics[k] = statistics[k] + 1
+                      }else{
+                        var k = parseInt((v-min)/interval) * 2 + 1
+                        statistics[k] = statistics[k] + 1
+                      }
+                    })
+                  }else if(key.includes('(r)')){
+                    [0,1].forEach((v) => {
+                      statistics[v] = 0
+                    })
+                    var bit = parseInt(key.split('(r)')[1].replace('_bit', '') )
+                    data.map((v) => {
+                      statistics[parseInt(this.hex2bin(v)[31-bit])] = statistics[parseInt(this.hex2bin(v)[31-bit])] + 1
+                    })
+                  }else{
+                    this.arrayDuplicates(data).forEach((v) => {
+                      statistics[v] = 0
+                    })
+                    data.map((v) => {
+                      statistics[v] = statistics[v] + 1
+                    })
+                  }
+                  var tmp2 = {}
+                  Object.keys(statistics).forEach((k) => {
+                    var rate = (statistics[k] / count)
+                    if(key.includes('(c)')){
+                      var range = `${parseInt(k/2*interval) + min - interval/2}--${parseInt(k/2*interval) + min + interval/2}`
+                      tmp2[parseInt(k/2*interval) + min] = `count=${statistics[k]};rate=${rate.toFixed(2)};range=${range}`
+                    }else{
+                      tmp2[k] = `count=${statistics[k]};rate=${rate.toFixed(2)}`
+                    }
+                  })
+                  res[item[0]][key][process] = tmp2
                 }
               }
             })
           })
         })
       })
-
       Object.keys(res).forEach((logIndex) => {
         var row = document.createElement("div")
         row.setAttribute('class', "row")
         var name = document.createElement("div")
         name.setAttribute('class', "name")
-        name.setAttribute('style', `height:800px;`)
+        name.setAttribute('style', `height:${document.body.offsetHeight}px;`)
         name.innerHTML = logIndex
         
         var graphRow = document.createElement("div")
@@ -627,64 +708,29 @@ export default {
               top: ((idx + 0.5) * 100) / 7 + '%',
               text: process+'/'+key
             });
-            if(key.includes('(d)')){
-              singleAxis.push({
-                left: 150,
-                type: 'category',
-                boundaryGap: false,
-                data: this.arrayDuplicates(res[logIndex][key][process]),
-                top: (idx * 100) / 7 + 5 + '%',
-                height: 100 / 7 - 10 + '%',
-                axisLabel: {
-                  interval: 2
-                }
-              });
-            }else{
-              singleAxis.push({
-                left: 150,
-                type: 'value',
-                boundaryGap: false,
-                top: (idx * 100) / 7 + 5 + '%',
-                height: 100 / 7 - 10 + '%',
-                axisLabel: {
-                  interval: 2
-                }
-              });
-            }
-
-            if(key.includes('(r)')){
-              var bit = parseInt(key.split('(r)')[1].replace('_bit', '') )
-              series.push({
-                singleAxisIndex: idx,
-                coordinateSystem: 'singleAxis',
-                type: 'scatter',
-                data: res[logIndex][key][process].map((v) => parseInt(this.hex2bin(v)[31-bit])),
-                // symbolSize: function (dataItem) {
-                //   return dataItem[1] * 4;
-                // }
-              })
-            }else if(key.includes('(d)')){
-              series.push({
-                singleAxisIndex: idx,
-                coordinateSystem: 'singleAxis',
-                type: 'scatter',
-                data: res[logIndex][key][process],
-                // symbolSize: function (dataItem) {
-                //   return dataItem[1] * 4;
-                // }
-              })
-            }else{
-              series.push({
-                singleAxisIndex: idx,
-                coordinateSystem: 'singleAxis',
-                type: 'scatter',
-                data: res[logIndex][key][process].map((v) => parseFloat(v)),
-                symbolSize: function (dataItem) {
-                  // console.log(dataItem)
-                  return dataItem * 4;
-                }
-              })
-            }
+            singleAxis.push({
+              left: 150,
+              type: 'category',
+              boundaryGap: false,
+              data: Object.keys(res[logIndex][key][process]),
+              top: (idx * 100) / 7 + 5 + '%',
+              height: 100 / 7 - 10 + '%',
+              axisLabel: {
+                interval: 1
+              }
+            });
+            series.push({
+              singleAxisIndex: idx,
+              coordinateSystem: 'singleAxis',
+              type: 'scatter',
+              data: Object.keys(res[logIndex][key][process]).map((v) => {
+                return res[logIndex][key][process][v]
+              }),
+              symbolSize: function (dataItem) {
+                return parseFloat(dataItem.split(';')[1].split('=')[1]) * 100;
+              }
+            })
+            
           })
           // console.log(title, singleAxis, series)
           var option = {
@@ -697,7 +743,7 @@ export default {
           };
           var graph = document.createElement("div")
           graph.setAttribute('id', `${logIndex}${key}`)
-          graph.setAttribute('style', `width:1200px;height:800px;`)
+          graph.setAttribute('style', `width:1200px;height:${document.body.offsetHeight-70}px;`)
           graphRow.appendChild(graph)
 
           var chart = echarts.init(document.getElementById(`${logIndex}${key}`), 'dark')
@@ -737,6 +783,15 @@ export default {
       return a
     },
 
+    clone(obj) {
+      if (null == obj || "object" != typeof obj) return obj;
+      var copy = obj.constructor();
+      for (var attr in obj) {
+          if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
+      }
+      return copy;
+    },
+
     hex2bin(hex){
       var res = (parseInt(hex, 16).toString(2)).padStart(8, '0')
       if (res.length < 32){
@@ -768,7 +823,7 @@ export default {
           if (invertedIndexTable.hasOwnProperty(key.toLowerCase()))
           {
             
-            var intersec = this.arrayIntersection(invertedIndexTable[key]['x'], processOriginIndex)
+            var intersec = this.arrayIntersection(invertedIndexTable[key.toLowerCase()]['x'], processOriginIndex)
             if (intersec.length > 0){
               intersec.forEach((elm) => {
                 var pos = d3.bisect(kvOriginIndex, parseInt(elm));

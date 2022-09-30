@@ -5,6 +5,7 @@
         a(class="go" @click="go") GO
         a(class="func" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="func" @click="openHighlightModal") Highlight
+        a(class="func" @click="openPaintCategoryModal") PaintCategory
         a(class="func" @click="exportConfig") ExportConfig
         a(class="func" @click="loadConfig") LoadConfig
         input(id="fileInput" type="file" style="display:none")
@@ -16,9 +17,29 @@
           input(class="modal-input-color" type="color" id="highlight-color")
           span(class="addBtn" @click="newHighlightItem") Add
         ul(id="highlight-list" style="list-style: none;")
+    div(id="paint-category-modal" class="modal")
+      div(class="modal-content")
+        div(class="modal-header")
+          h2 Paint Category
+          form(name="paintCategory")
+            label(class="container") sequential
+              input(type="radio" checked="checked" name="radio" value="sequential")
+              span(class="checkmark")
+            label(class="container") statistics
+              input(type="radio" name="radio" value="statistics")
+              span(class="checkmark")
+    div(id="graph-config-modal" class="modal")
+      div(class="modal-content")
+        div(class="modal-header")
+          h2 Bisection Or Manual Config
+          input(class="modal-input-text" type="text" id="interval-input" placeholder="Interval1,Interval2,Interval3...")
+    
+    div(id="full-graph-modal" class="full-screen-modal")
+      div(class="full-screen-modal-content")
+        div(id="full-graph" style=`width:1800px;height:800px;`)
+
     div(id="keywords-modal" class="keywords-modal")
       div(class="keywords-modal-content")
-        //- div(id="keywords-graph" style="width:3000px;height:750px;")
         svg(id="viz" width="1600" height="800")
     div(id="graphs" class="graphs")
     div(class="loading hidden")
@@ -48,6 +69,8 @@ export default {
       index:[''],
       filterData: {},
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
+      paintCategory: 'sequential',
+      bisection: 10,
       graphHeight: 200,
       graphWidth: 550,
     } 
@@ -95,6 +118,12 @@ export default {
         document.getElementById("highlight-modal").style.display = "none";
       }else if (event.target == document.getElementById("keywords-modal")) {
         document.getElementById("keywords-modal").style.display = "none";
+      }else if (event.target == document.getElementById("graph-config-modal")) {
+        document.getElementById("graph-config-modal").style.display = "none";
+      }else if (event.target == document.getElementById("paint-category-modal")) {
+        document.getElementById("paint-category-modal").style.display = "none";
+      }else if (event.target == document.getElementById("full-graph-modal")) {
+        document.getElementById("full-graph-modal").style.display = "none";
       }
     }
 
@@ -109,7 +138,18 @@ export default {
       that.highlightKeyword = obj.highlightKeyword
       d3.select(`#canvas`).remove()
       that.createKeyWordsTreeGraph()
-    } 
+    }
+
+    var rad = document.paintCategory.radio;
+    var prev = null;
+    for (var i = 0; i < rad.length; i++) {
+        rad[i].addEventListener('change', function() {
+            if (this !== prev) {
+                prev = this;
+            }
+            that.paintCategory = this.value
+        });
+    }
   },
   methods: {
     async getKeyValues (index) {
@@ -182,8 +222,11 @@ export default {
           })
         })
       })
-      this.$common.createSequentialCompareGraph(graphs, this.graphHeight, this.graphWidth, this.highlightKeyword, this.filterData, this.$router)
-      // this.$common.createStatisticsCompareGraph(graphs)
+      if(this.paintCategory == 'sequential'){
+        this.$common.createSequentialCompareGraph(graphs, this.graphHeight, this.graphWidth, this.highlightKeyword, this.filterData, this.$router)
+      }else{
+        this.$common.createStatisticsCompareGraph(graphs, this.bisection)
+      }
     },
     createKeyWordsTreeGraph(){
       this.svg = d3.select(`#viz`).append("g")
@@ -212,12 +255,28 @@ export default {
       var modal = document.getElementById("highlight-modal")
       modal.style.display = "none"
     },
+    openPaintCategoryModal(){
+      var modal = document.getElementById("paint-category-modal")
+      modal.style.display = "block"
+    },
+    closePaintCategoryModal(){
+      var modal = document.getElementById("paint-category-modal")
+      modal.style.display = "none"
+    },
     openKeyWordsTreeModal(){
       var modal = document.getElementById("keywords-modal")
       modal.style.display = "block"
     },
     closeKeyWordsTreeModal(){
       var modal = document.getElementById("keywords-modal")
+      modal.style.display = "none"
+    },
+    openFullGraphModal(){
+      var modal = document.getElementById("full-graph-modal")
+      modal.style.display = "block"
+    },
+    closeFullGraphModal(){
+      var modal = document.getElementById("full-graph-modal")
       modal.style.display = "none"
     },
     exportConfig(){
@@ -387,6 +446,29 @@ html,body {
   animation-duration: 0.4s
 }
 
+/***************************************** keywords modal css */
+.full-screen-modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+}
+
+.full-screen-modal-content {
+  overflow: auto;
+  position: relative;
+  background-color: #555;
+  /* padding: 20px; */
+  border: 1px solid #888;
+  width: 100%;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+  animation-name: animatetop;
+  animation-duration: 0.4s
+}
+
 /***************************************** highlight modal css */
 .modal {
   display: none; /* Hidden by default */
@@ -513,6 +595,70 @@ ul li:hover {
 .close-list:hover {
   background-color: #f44336;
   color: white;
+}
+
+/* The container */
+.container {
+  display: block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  font-size: 22px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Hide the browser's default radio button */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Create a custom radio button */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+  border-radius: 50%;
+}
+
+/* On mouse-over, add a grey background color */
+.container:hover input ~ .checkmark {
+  background-color: #ccc;
+}
+
+/* When the radio button is checked, add a blue background */
+.container input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+
+/* Create the indicator (the dot/circle - hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+/* Show the indicator (dot/circle) when checked */
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+/* Style the indicator (dot/circle) */
+.container .checkmark:after {
+ 	top: 9px;
+	left: 9px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: white;
 }
 
 </style>
