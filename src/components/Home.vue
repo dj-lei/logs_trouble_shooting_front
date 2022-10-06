@@ -1,6 +1,7 @@
 <template lang="pug">
   div(class="home-row full-height")
     div(class="page-left" style="background-color:#000000;height:100%;")
+      a(@click="openUploadModal") UPLOAD
       h2 Running Log Analysis
       ul(id="running-log" class="running-log")
         //- li
@@ -8,9 +9,8 @@
         //-     div(class="loader")
     div(class="page-right")
       div(id="topnav" class="home-topnav")
-        a(@click="openUploadModal") UPLOAD
-        a(@click="goCompareView") GO COMPARE
-        a(@click="goLogicView") GO LOGIC
+        a(class="active" @click="goLogicView") GO LOGIC
+        a(class="deactive") GO COMPARE
         input(id="fileInput" type="file" style="display:none")
       div(class="split left")
         input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
@@ -98,22 +98,25 @@ export default {
       })
     },
     createDropDown(){
+      let that = this
       var indices_sort = this.indices.sort()
       indices_sort.forEach((index) => {
         var elementLeft = document.createElement("li")
         elementLeft.setAttribute('id', index)
         elementLeft.innerText = index
         elementLeft.onclick = function(){
+          that.$common.removeAllChildDom('groups2')
           if (!document.getElementById("groups2").hasChildNodes()) {
             var elementRight = document.createElement("li")
             elementRight.setAttribute('id', index)
             elementRight.innerText = index
 
-            var span = document.createElement("SPAN");
-            var txt = document.createTextNode("\u00D7");
-            span.className = "close-list";
-            span.appendChild(txt);
-            elementRight.appendChild(span);
+            // var span = document.createElement("a");
+            // span.innerText = "X"
+            // var txt = document.createTextNode("\u00D7");
+            // span.className = "close-list";
+            // span.appendChild(txt);
+            // elementRight.appendChild(span);
             document.getElementById("groups2").appendChild(elementRight)
 
             var close = document.getElementsByClassName("close-list");
@@ -175,17 +178,6 @@ export default {
         alert("Log File Format ERROR or Not Support Currently!");
         this.$common.stopLoading()
       })
-    },
-    go() {
-      var ul, li, i
-      var params = []
-      ul = document.getElementById("groups2");
-      li = ul.getElementsByTagName("li");
-      for (i = 0; i < li.length; i++) {
-        params.push(li[i].innerText.split(/\n/)[0])
-      }
-      let routeData = this.$router.resolve({path: '/compareview', query:{index: params.join(",")}});
-      window.open(routeData.href, '_blank');
     },
     async goCompareView(){
       var ul, li, i
@@ -282,6 +274,21 @@ html,body {
   padding: 0px 0;
 }
 
+.page-left a {
+  display: block;
+  color: rgb(255, 255, 255);
+  width: 100%;
+  text-align: center;
+  font-size: 36px;
+  padding: 0px 0;
+  border: 1px solid rgb(0, 0, 0);
+  background-color: #FFA500;
+}
+
+.page-left a:hover {
+  background-color: #000; /* Add a hover color */
+}
+
 .page-right {
   flex: 80%;
   padding: 0px;
@@ -289,11 +296,11 @@ html,body {
 
 .home-topnav {
   width: 100%; /* Full-width */
-  background-color: #333; /* Dark-grey background */
+  background-color: #FFA500; /* Dark-grey background */
   overflow: hidden; /* Overflow due to float */
 }
 
-.home-topnav a {
+.home-topnav .active {
   text-align: center; /* Center-align text */
   float: left;
   width: 50%; /* Equal width (5 icons with 20% width each = 100%) */
@@ -302,8 +309,18 @@ html,body {
   border: 1px solid black;
 }
 
-.home-topnav a:hover {
+.home-topnav .active:hover {
   background-color: #000; /* Add a hover color */
+}
+
+.home-topnav .deactive {
+  text-align: center; /* Center-align text */
+  float: left;
+  width: 50%; /* Equal width (5 icons with 20% width each = 100%) */
+  color: rgb(211, 202, 202); /* White text color */
+  font-size: 36px; /* Increased font size */
+  border: 1px solid black;
+  background-color: #f3f3f3;
 }
 
 .split {
@@ -349,9 +366,8 @@ html,body {
 
 .groups ul li {
   border: 1px solid #ddd; /* Add a thin border to each list item */
-  margin-top: -1px; /* Prevent double borders */
   background-color: #f6f6f6; /* Add a grey background color */
-  padding: 12px !important; /* Add some padding */
+  padding: 12px !important;
   font-size: 12px !important;
 }
 
@@ -405,147 +421,12 @@ html,body {
 /* Style the close button */
 .close-list {
   float: right;
-  padding: 0px 20px 10px 20px;
+  padding: 12px;
+  font-size: 12px;
+  margin-bottom: 15px;
 }
 .close-list:hover {
   background-color: #f44336;
   color: white;
-}
-
-/***************************************** log prefix & upload modal css */
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-}
-
-/* Modal Content */
-.modal-content {
-  position: relative;
-  background-color: #fefefe;
-  margin: 5% auto;
-  /* padding: 20px; */
-  border: 1px solid #888;
-  width: 55%;
-  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
-  animation-name: animatetop;
-  animation-duration: 0.4s
-}
-
-/* Modal Header */
-.modal-header {
-  padding: 50px 50px;
-  background-color: #FFCC00;
-  font-size: 25px; /* Increase font size */
-  text-align: center;
-  color: white;
-}
-
-/* Style the input */
-.modal-header label {
-  float: left;
-  font-size: 15px;
-}
-.modal-header input {
-  float: left;
-  border: none;
-  border-radius: 0;
-  width: 15%;
-  padding: 5px;
-  font-size: 10px;
-  background-color: white;
-}
-
-.modal-footer {
-  padding: 0px 0px 0px 0px;
-  background-color: #333;
-  color: white;
-}
-
-/* Style the "Add" button */
-.modal-footer .button {
-  padding: 5px;
-  width: 50%;
-  background: #d9d9d9;
-  color: #ffffff;
-  text-align: center;
-  font-size: 20px;
-  cursor: pointer;
-  transition: 0.3s;
-  border-radius: 0;
-}
-.modal-footer .button:hover {
-  background-color: #bbb;
-}
-
-/* Modal Body */
-/* .modal-body {padding: 2px 16px;} */
-
-/* Add Animation */
-@keyframes animatetop {
-  from {top: -300px; opacity: 0}
-  to {top: 0; opacity: 1}
-}
-
-/***************************************** full screen loading css */
-.hidden {
-  display: none !important;
-}
-
-div.loading{
-  position: fixed;
-  z-index: 2;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(16, 16, 16, 0.5);
-}
-
-@keyframes uil-ring-anim {
-  0% {
-    -ms-transform: rotate(0deg);
-    -moz-transform: rotate(0deg);
-    -webkit-transform: rotate(0deg);
-    -o-transform: rotate(0deg);
-    transform: rotate(0deg);
-  }
-  100% {
-    -ms-transform: rotate(360deg);
-    -moz-transform: rotate(360deg);
-    -webkit-transform: rotate(360deg);
-    -o-transform: rotate(360deg);
-    transform: rotate(360deg);
-  }
-}
-
-.uil-ring-css {
-  margin: auto;
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
-  width: 200px;
-  height: 200px;
-}
-.uil-ring-css > div {
-  position: absolute;
-  display: block;
-  width: 160px;
-  height: 160px;
-  top: 20px;
-  left: 20px;
-  border-radius: 80px;
-  box-shadow: 0 6px 0 0 #ffffff;
-  -ms-animation: uil-ring-anim 1s linear infinite;
-  -moz-animation: uil-ring-anim 1s linear infinite;
-  -webkit-animation: uil-ring-anim 1s linear infinite;
-  -o-animation: uil-ring-anim 1s linear infinite;
-  animation: uil-ring-anim 1s linear infinite;
 }
 </style>

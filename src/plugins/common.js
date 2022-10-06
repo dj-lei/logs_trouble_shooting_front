@@ -279,7 +279,9 @@ export default {
 
     createTreeSvg(data, svg, filterData){
       let that = this
-
+      if (Object.keys(data).length == 0) {
+        return
+      }
       const width = 1600
       const dx = 10
       const dy = width / 6
@@ -413,6 +415,13 @@ export default {
             .text(d => d.data.name)
             .attr("stroke-width", 0.5)
             .attr("stroke", d => {
+                if (filterData.hasOwnProperty(d.id)){
+                  return "#33CC00"
+                }else{
+                  return "white"
+                }
+              })
+            .attr("fill", d => {
                 if (filterData.hasOwnProperty(d.id)){
                   return "#33CC00"
                 }else{

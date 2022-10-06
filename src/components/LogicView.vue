@@ -14,9 +14,10 @@
       template(v-else-if="viewMode === 'filter'")
         //- a(class="btn" @click="openHighlightModal") Highlight
         a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
-        a(class="btn" @click="$common.exportConfig(filterGraphs, highlightKeyword)") ExportConfig
-        a(class="btn" @click="$common.loadConfig") LoadConfig
-        input(type="text" placeholder="Search..")
+        //- a(class="btn" @click="$common.exportConfig(viewMode, filterGraphs)") ExportConfig
+        //- a(class="btn" @click="$common.loadConfig") LoadConfig
+        a(class="btn" @click="exportExcel") Export
+        input(id="cmd" type="text" placeholder="Search.." v-on:keyup.enter="filter")
         //- a(class="index") {{process}}
       form(name="viewMode")
         label(class="container") Overview
@@ -72,20 +73,20 @@
       div(id="tooltip")
 
     //- Standard log and graph detail
-    div(id="log-detail" class="overlay-log")
+    div(id="log-detail-standard" class="overlay-log-standard")
       div(class="overlay-content")
-        a(href="javascript:void(0)" class="zoom-btn" @click="zoomLogDetal") O
-        table(id='content')
-    div(id="graph-detail" class="overlay-graph" style="left: 100%;")
-      div(id='graphs' class="overlay-content")
+        a(id="log-detail-standard-zoom-btn" href="javascript:void(0)" class="zoom-btn" @click="zoomLogDetal") O
+        table(id='content-standard')
+    div(id="graph-detail-standard" class="overlay-graph-standard" style="left: 100%;")
+      div(id='graphs-standard' class="overlay-content")
 
     //- Filter log and graph detail
-    div(id="log-detail" class="overlay-log")
+    div(id="log-detail-filter" class="overlay-log-filter")
       div(class="overlay-content")
-        a(href="javascript:void(0)" class="zoom-btn" @click="zoomLogDetal") O
-        table(id='content')
-    div(id="graph-detail" class="overlay-graph" style="left: 100%;")
-      div(id='graphs' class="overlay-content")
+        a(id="log-detail-filter-zoom-btn" href="javascript:void(0)" class="zoom-btn" @click="zoomLogDetal") O
+        table(id='content-filter')
+    div(id="graph-detail-filter" class="overlay-graph-filter" style="left: 100%;")
+      div(id='graphs-filter' class="overlay-content")
 
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
@@ -95,6 +96,7 @@
 <script>
 import * as d3 from 'd3'
 import * as echarts from 'echarts'
+import common from '../plugins/common'
 
 export default {
   data () {
@@ -110,13 +112,22 @@ export default {
       kv: '',
       dataIndex: 0,
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
-
+      // standard mode global var
       filterGraphs: {},
       originLogs:{},
       keyWords: {},
       invertedIndexTable: {},
       keyWordsTree: {},
+      selectableLines: [],
+      selectedLines: {},
+      selectedLinesOnGraph:{},
+      allLine: {},
+      graphLogData: [],
+      isLogFullScreen: false,
+      isGraphFullScreen: false,
 
+      // filter mode global var
+      cmdWords: [],
       filterInvertedIndexTable:{},
       filterOriginLogs:{},
       filterKeyWords:{},
@@ -124,28 +135,26 @@ export default {
       filterExp:{},
       filterfilterGraphs:{},
       filteredKeyWords:{},
+      filterKeyWordsTree: {},
+      filterSelectableLines: [],
+      filterSelectedLines: {},
+      filterSelectedLinesOnGraph:{},
+      filterAllLine: {},
+      filterGraphLogData: [],
+      isFilterLogFullScreen: false,
+      isFilterGraphFullScreen: false,
 
       viewMode: 'standard',
       prevViewMode: '',
       svg: '',
       svgKeywordsTree:'',
-      isLogFullScreen: false,
-      isGraphFullScreen: false,
 
       drag: '',
       zoom: '',
       logNum : 10,
       data:[],
       process_num:{},
-
-      selectableLines: [],
-      selectedLines: {},
-      selectedLinesOnGraph:{},
-
-      allLine: {},
       numLine: 0,
-      
-      graphLogData: [],
 
       width: 1000,
       height: 1200,
@@ -167,7 +176,7 @@ export default {
     this.$common.setChartDartTheme(echarts)
     this.width = document.body.offsetWidth
     this.height = document.body.offsetHeight
-    this.graphHeight = document.body.offsetHeight - 20
+    this.graphHeight = document.body.offsetHeight - 50
     this.graphWidth = document.body.offsetWidth / 2
 
     // extract url param 
@@ -184,18 +193,24 @@ export default {
     // modal cancel event
     window.onclick = function(event) {
     if (event.target == document.getElementById("highlight-modal")) {
-      if(that.isOverview == true){
+      if(that.viewMode == 'overview'){
         that.createHighlightPoint()
-      }else{
-        that.$common.removeAllChildDom('content')
+      }else if(that.viewMode == 'standard'){
+        that.$common.removeAllChildDom('content-standard')
         that.openLogDetail(that.numLine, true)
       }
       document.getElementById("highlight-modal").style.display = "none";
     }else if(event.target == document.getElementById("keywords-modal")){
       if(that.viewMode == 'standard'){
         that.refreshSelectableLines()
+        // that.$common.removeAllChildDom('content-standard')
+        // that.graphLogData = []
+        // that.openLogDetail(0, true)
       }else{
         that.refreshFilterSelectableLines()
+        // that.$common.removeAllChildDom('content-filter')
+        // that.filterGraphLogData = []
+        // that.openFilterLogDetail(0, true)
       }
       document.getElementById("keywords-modal").style.display = "none";
     }else if(event.target == document.getElementById("legend-config-modal")){
@@ -236,22 +251,30 @@ export default {
             that.modeSwitch()
             that.$common.startLoading()
             if (this.value == 'filter') {
-              that.initFilterMode()
-              that.packageFilteredData()
-            }else if(this.value == 'standard'){
-              if(Object.keys(that.selectedLines).length > 0){
-                if(that.isGraphFullScreen == true){
-                  document.getElementById("graph-detail").style.left = "0%"
-                  document.getElementById("graph-detail").style.width = "100%"
-                }else if(that.isLogFullScreen == true){
-                  document.getElementById("log-detail").style.width = "100%"
-                }else{
-                  document.getElementById("log-detail").style.width = "50%"
-                  document.getElementById("graph-detail").style.left = "50%"
-                  document.getElementById("graph-detail").style.width = "50%"
-                }
+              if(that.filterTimestamp.length == 0){
+                that.initFilterMode()
+                that.openFilterLogDetail(0, true)
+              }
+              if(that.isFilterGraphFullScreen == true){
+                document.getElementById("graph-detail-filter").style.left = "0%"
+                document.getElementById("graph-detail-filter").style.width = "100%"
+              }else if(that.isFilterLogFullScreen == true){
+                document.getElementById("log-detail-filter").style.width = "100%"
               }else{
-                that.openLogDetail(0, true)
+                document.getElementById("log-detail-filter").style.width = "50%"
+                document.getElementById("graph-detail-filter").style.left = "50%"
+                document.getElementById("graph-detail-filter").style.width = "50%"
+              }
+            }else if(this.value == 'standard'){
+              if(that.isGraphFullScreen == true){
+                document.getElementById("graph-detail-standard").style.left = "0%"
+                document.getElementById("graph-detail-standard").style.width = "100%"
+              }else if(that.isLogFullScreen == true){
+                document.getElementById("log-detail-standard").style.width = "100%"
+              }else{
+                document.getElementById("log-detail-standard").style.width = "50%"
+                document.getElementById("graph-detail-standard").style.left = "50%"
+                document.getElementById("graph-detail-standard").style.width = "50%"
               }
             }else if(this.value == 'overview'){
               if(that.data.length == 0){
@@ -264,7 +287,7 @@ export default {
             that.$common.stopLoading()
         });
     }
-    this.getIndex (this.index)
+    this.getIndex(this.index)
     this.initHighlightModal()
     this.initStandardMode()
   },
@@ -517,7 +540,7 @@ export default {
       this.openLogDetail(0, true)
     },
     openLogDetail(line, isRefreshGraph) {
-      var content = document.getElementById('content')
+      var content = document.getElementById('content-standard')
 
       if ((!content.hasChildNodes()) & (Object.keys(this.graphLogData).length > 0)) {
         Object.keys(this.graphLogData).forEach((num, logIndex) => {
@@ -535,7 +558,7 @@ export default {
             })
           })
           if(logIndex <= line){
-            td.style['background-color'] = "#000080"
+            td.style['background-color'] = "#000000"
           }
           td.innerText = this.graphLogData[num]['timestamp'] + ':' + this.graphLogData[num]['msg']
           tr.appendChild(td)
@@ -544,12 +567,14 @@ export default {
         document.getElementById(`log${line}`).scrollIntoView(true)
       }
       
-      document.getElementById("log-detail").style.width = "50%"
+      document.getElementById("log-detail-standard").style.width = "50%"
       if(isRefreshGraph){
         this.openSequentialGraphDetail()
       }
     },
     refreshSelectableLines(){
+      this.selectableLines = []
+      this.selectedLines = []
       Object.keys(this.filterGraphs).forEach((key) => {
         var process = this.filterGraphs[key][0]
         var keyword = this.filterGraphs[key][1]
@@ -572,11 +597,11 @@ export default {
           }
         }
       })
-      this.createLegendConfigModal()
+      this.createLegendConfigModal(this.selectableLines, this.selectedLines)
     },
     openSequentialGraphDetail() {
       let that = this
-      this.$common.removeAllChildDom("graphs")
+      this.$common.removeAllChildDom("graphs-standard")
 
       this.isGraphFullScreen = false
       var processes = []
@@ -722,7 +747,7 @@ export default {
       var element = document.createElement("div")
       element.setAttribute('id', "Sequential")
       element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-      document.getElementById('graphs').appendChild(element)
+      document.getElementById('graphs-standard').appendChild(element)
       var chart = echarts.init(document.getElementById("Sequential"), 'dark')
       
       // bind click event and paint
@@ -746,21 +771,22 @@ export default {
           icon: 'path://M395.731085 571.196755l10.18176 10.18176q4.072704 4.072704 8.145408 7.63632t8.145408 7.63632l12.218112 12.218112q20.363521 20.363521 16.290817 35.636161t-25.454401 35.636161q-9.163584 10.18176-30.036193 31.054369t-44.799745 45.308833-46.32701 46.836098-34.617985 35.636161q-18.327169 18.327169-25.454401 32.072545t6.109056 26.981665q9.163584 9.163584 23.418049 24.436225t24.436225 25.454401q17.308993 17.308993 12.7272 30.545281t-30.036193 15.27264q-26.472577 3.054528-59.05421 7.127232t-67.199618 7.63632-67.708706 7.63632-60.581474 7.127232q-26.472577 3.054528-36.654337-6.618144t-8.145408-34.108897q2.036352-25.454401 5.599968-57.017858t7.63632-64.654178 7.63632-65.672354 6.618144-60.072386q3.054528-29.527105 16.799905-37.672513t31.054369 9.163584q10.18176 10.18176 26.472577 24.945313t27.490753 25.963489 21.381697 7.127232 23.418049-16.290817q13.236288-13.236288 36.145249-36.654337t47.854274-48.363362 48.363362-48.87245 37.672513-38.181601q6.109056-6.109056 13.745376-11.709024t16.799905-7.63632 18.836257 1.018176 20.872609 13.236288zM910.928158 58.036034q26.472577-3.054528 36.654337 6.618144t8.145408 34.108897q-2.036352 25.454401-5.599968 57.017858t-7.63632 64.654178-7.63632 66.181442-6.618144 60.581474q-3.054528 29.527105-16.799905 37.163425t-31.054369-9.672672q-10.18176-10.18176-27.999841-26.472577t-29.018017-27.490753-19.345345-9.672672-20.363521 13.745376q-14.254464 14.254464-37.163425 37.672513t-48.363362 49.381538-49.890626 50.399714l-37.672513 37.672513q-6.109056 6.109056-13.236288 12.218112t-15.781729 9.163584-18.327169 1.018176-19.854433-13.236288l-38.690689-38.690689q-20.363521-20.363521-17.818081-37.163425t22.908961-37.163425q9.163584-9.163584 30.545281-31.054369t45.817921-46.32701 47.345186-47.854274 36.145249-35.636161q18.327169-18.327169 22.908961-30.036193t-8.654496-24.945313q-9.163584-9.163584-21.890785-22.399873t-22.908961-23.418049q-17.308993-17.308993-12.7272-30.545281t30.036193-16.290817 58.545122-7.127232 67.708706-7.63632 67.708706-7.63632 60.581474-7.127232z',
           onclick: (e) =>{
             if(that.isGraphFullScreen == false){
-              
-              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth}px;height:${document.body.offsetHeight - 20}px;`)
-              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth})
+              document.getElementById("log-detail-standard-zoom-btn").style.display = "none"
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth}px;height:${that.graphHeight}px;`)
+              chart.resize({height:that.graphHeight, width:document.body.offsetWidth})
               
               that.isGraphFullScreen = true
-              document.getElementById("graph-detail").style.left = "0%"
-              document.getElementById("graph-detail").style.width = "100%"
+              document.getElementById("graph-detail-standard").style.left = "0%"
+              document.getElementById("graph-detail-standard").style.width = "100%"
             }else{
-              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth / 2}px;height:${document.body.offsetHeight - 20}px;`)
-              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth / 2})
+              document.getElementById("log-detail-standard-zoom-btn").style.display = "block"
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth / 2}px;height:${that.graphHeight}px;`)
+              chart.resize({height:that.graphHeight, width:document.body.offsetWidth / 2})
  
               that.isGraphFullScreen = false
-              document.getElementById("graph-detail").style.left = "50%"
-              document.getElementById("graph-detail").style.width = "50%"
-              document.getElementById("log-detail").style.width = "50%"
+              document.getElementById("graph-detail-standard").style.left = "50%"
+              document.getElementById("graph-detail-standard").style.width = "50%"
+              document.getElementById("log-detail-standard").style.width = "50%"
             }
 
           }
@@ -771,7 +797,7 @@ export default {
         if(params['componentType'] != 'markLine'){
           that.numLine = params.data.processIndex
           that.process = params.seriesName.split('.')[0]
-          that.$common.removeAllChildDom('content')
+          that.$common.removeAllChildDom('content-standard')
           that.graphLogData = that.originLogs[that.process]
           that.openLogDetail(that.numLine, false)
         }
@@ -781,8 +807,8 @@ export default {
       });
 
       // open div
-      document.getElementById("graph-detail").style.left = "50%"
-      document.getElementById("graph-detail").style.width = "50%"
+      document.getElementById("graph-detail-standard").style.left = "50%"
+      document.getElementById("graph-detail-standard").style.width = "50%"
     },
 ////////////////////////Filter Mode///////////////////////////
     initFilterMode(){
@@ -820,31 +846,45 @@ export default {
       })
     },
     openFilterLogDetail(line, isRefreshGraph) {
-      var content = document.getElementById('content')
-
-      if ((!content.hasChildNodes()) & (Object.keys(this.graphLogData).length > 0)) {
-        Object.keys(this.graphLogData).forEach((num, logIndex) => {
-          var tr = document.createElement("tr")
-          tr.setAttribute('id', `log${logIndex}`)
-          var td = document.createElement("td")
-          td.style.color = "#FFFFFF"
-
-          if(logIndex <= line){
-            td.style['background-color'] = "#000080"
+      var colorPalette = ['#dd6b66','#759aa0','#e69d87','#8dc1a9','#ea7e53','#eedd78','#73a373','#73b9bc','#7289ab', '#91ca8c','#f49f42']
+      var content = document.getElementById('content-filter')
+      if ((!content.hasChildNodes()) & (Object.keys(this.filterGraphLogData).length > 0)) {
+        var wordColorPattern = {}
+        var count = 0
+        this.cmdWords.forEach((word) => {
+          if(!word.includes('@exp')){
+            if(word.includes('(c)')){
+              word = word.split('(c)')[0].replace('@', '')
+            }
+            wordColorPattern[word] = colorPalette[count]
+            count = count + 1
           }
-          td.innerText = this.graphLogData[num]['timestamp'] + ':' + this.graphLogData[num]['msg']
-          tr.appendChild(td)
+        })
+        Object.keys(this.filterGraphLogData).forEach((num, logIndex) => {
+          var tr = document.createElement("tr")
+          tr.setAttribute('id', `filter-log${logIndex}`)
+          var text = `<td style="color:#FFFFFF">${this.filterGraphLogData[num]['timestamp'] + ':' + this.filterGraphLogData[num]['msg']}</td>`
+          Object.keys(wordColorPattern).forEach((word) => {
+            if(text.toLowerCase().includes(word.toLowerCase())){
+              var replaceT = `<font color="${wordColorPattern[word]}">${word}</font>`
+              var re = new RegExp(word,"gi");
+              text = text.replace(re, replaceT)
+            }
+          })
+          tr.insertAdjacentHTML('beforeend', text)
           content.appendChild(tr)
         })
-        document.getElementById(`log${line}`).scrollIntoView(true)
+        document.getElementById(`filter-log${line}`).scrollIntoView(true)
       }
       
-      document.getElementById("log-detail").style.width = "50%"
+      document.getElementById("log-detail-filter").style.width = "50%"
       if(isRefreshGraph){
         this.openFilterSequentialGraphDetail()
       }
     },
     refreshFilterSelectableLines(){
+      this.filterSelectableLines = []
+      this.filterSelectedLines = []
       Object.keys(this.filterfilterGraphs).forEach((key) => {
         var keyword = this.filterfilterGraphs[key][1]
         var bit = ''
@@ -858,15 +898,14 @@ export default {
           }else{
             var name = keyword
           }
-          var value = this.filteredKeyWords[keyword]
-          this.selectableLines.push(name)
+          this.filterSelectableLines.push(name)
         }
       })
-      this.createLegendConfigModal()
+      this.createLegendConfigModal(this.filterSelectableLines, this.filterSelectedLines)
     },
     openFilterSequentialGraphDetail() {
       let that = this
-      this.$common.removeAllChildDom("graphs")
+      this.$common.removeAllChildDom("graphs-filter")
 
       this.isGraphFullScreen = false
 
@@ -879,11 +918,11 @@ export default {
       var legend = []
       var unselect = {}
 
-      if (Object.keys(this.selectedLines).length == 0) {
+      if (Object.keys(this.filterSelectedLines).length == 0) {
         option['yAxis'] = [{'type':'value'}]
       }
 
-      Object.keys(this.selectedLines).forEach((line) => {
+      Object.keys(this.filterSelectedLines).forEach((line) => {
         var d = []
         var keyword = line
         var value = []
@@ -916,7 +955,7 @@ export default {
             fontSize:'7',
             padding:[0, 0, -7 * parseInt(yAxisIndex / 2), 0],
           },
-          position: this.selectedLines[line], // left or right
+          position: this.filterSelectedLines[line], // left or right
           offset: 30 * parseInt(yAxisIndex / 2),
           // data: line.includes('(d)') ? categories : null
         })
@@ -948,7 +987,7 @@ export default {
           }
         )
         yAxisIndex = yAxisIndex + 1
-        this.allLine[line] = d
+        this.filterAllLine[line] = d
         legend.push(line)
         unselect[line] = false
       })
@@ -964,10 +1003,10 @@ export default {
       }
       
       var element = document.createElement("div")
-      element.setAttribute('id', "Sequential")
+      element.setAttribute('id', "Sequential-filter")
       element.setAttribute('style', `width:${this.graphWidth}px;height:${this.graphHeight}px;`)
-      document.getElementById('graphs').appendChild(element)
-      var chart = echarts.init(document.getElementById("Sequential"), 'dark')
+      document.getElementById('graphs-filter').appendChild(element)
+      var chart = echarts.init(document.getElementById("Sequential-filter"), 'dark')
       
       // bind click event and paint
       option['legend']['selected'] = unselect
@@ -989,22 +1028,23 @@ export default {
           title: 'Zoom Out',
           icon: 'path://M395.731085 571.196755l10.18176 10.18176q4.072704 4.072704 8.145408 7.63632t8.145408 7.63632l12.218112 12.218112q20.363521 20.363521 16.290817 35.636161t-25.454401 35.636161q-9.163584 10.18176-30.036193 31.054369t-44.799745 45.308833-46.32701 46.836098-34.617985 35.636161q-18.327169 18.327169-25.454401 32.072545t6.109056 26.981665q9.163584 9.163584 23.418049 24.436225t24.436225 25.454401q17.308993 17.308993 12.7272 30.545281t-30.036193 15.27264q-26.472577 3.054528-59.05421 7.127232t-67.199618 7.63632-67.708706 7.63632-60.581474 7.127232q-26.472577 3.054528-36.654337-6.618144t-8.145408-34.108897q2.036352-25.454401 5.599968-57.017858t7.63632-64.654178 7.63632-65.672354 6.618144-60.072386q3.054528-29.527105 16.799905-37.672513t31.054369 9.163584q10.18176 10.18176 26.472577 24.945313t27.490753 25.963489 21.381697 7.127232 23.418049-16.290817q13.236288-13.236288 36.145249-36.654337t47.854274-48.363362 48.363362-48.87245 37.672513-38.181601q6.109056-6.109056 13.745376-11.709024t16.799905-7.63632 18.836257 1.018176 20.872609 13.236288zM910.928158 58.036034q26.472577-3.054528 36.654337 6.618144t8.145408 34.108897q-2.036352 25.454401-5.599968 57.017858t-7.63632 64.654178-7.63632 66.181442-6.618144 60.581474q-3.054528 29.527105-16.799905 37.163425t-31.054369-9.672672q-10.18176-10.18176-27.999841-26.472577t-29.018017-27.490753-19.345345-9.672672-20.363521 13.745376q-14.254464 14.254464-37.163425 37.672513t-48.363362 49.381538-49.890626 50.399714l-37.672513 37.672513q-6.109056 6.109056-13.236288 12.218112t-15.781729 9.163584-18.327169 1.018176-19.854433-13.236288l-38.690689-38.690689q-20.363521-20.363521-17.818081-37.163425t22.908961-37.163425q9.163584-9.163584 30.545281-31.054369t45.817921-46.32701 47.345186-47.854274 36.145249-35.636161q18.327169-18.327169 22.908961-30.036193t-8.654496-24.945313q-9.163584-9.163584-21.890785-22.399873t-22.908961-23.418049q-17.308993-17.308993-12.7272-30.545281t30.036193-16.290817 58.545122-7.127232 67.708706-7.63632 67.708706-7.63632 60.581474-7.127232z',
           onclick: (e) =>{
-            if(that.isGraphFullScreen == false){
+            if(that.isFilterGraphFullScreen == false){
+              document.getElementById("log-detail-filter-zoom-btn").style.display = "none"
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth}px;height:${that.graphHeight}px;`)
+              chart.resize({height:that.graphHeight, width:document.body.offsetWidth})
               
-              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth}px;height:${document.body.offsetHeight - 20}px;`)
-              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth})
-              
-              that.isGraphFullScreen = true
-              document.getElementById("graph-detail").style.left = "0%"
-              document.getElementById("graph-detail").style.width = "100%"
+              that.isFilterGraphFullScreen = true
+              document.getElementById("graph-detail-filter").style.left = "0%"
+              document.getElementById("graph-detail-filter").style.width = "100%"
             }else{
-              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth / 2}px;height:${document.body.offsetHeight - 20}px;`)
-              chart.resize({height:document.body.offsetHeight - 20, width:document.body.offsetWidth / 2})
+              document.getElementById("log-detail-filter-zoom-btn").style.display = "block"
+              document.getElementById("Sequential").setAttribute('style', `width:${document.body.offsetWidth / 2}px;height:${that.graphHeight}px;`)
+              chart.resize({height:that.graphHeight, width:document.body.offsetWidth / 2})
  
-              that.isGraphFullScreen = false
-              document.getElementById("graph-detail").style.left = "50%"
-              document.getElementById("graph-detail").style.width = "50%"
-              document.getElementById("log-detail").style.width = "50%"
+              that.isFilterGraphFullScreen = false
+              document.getElementById("graph-detail-filter").style.left = "50%"
+              document.getElementById("graph-detail-filter").style.width = "50%"
+              document.getElementById("log-detail-filter").style.width = "50%"
             }
 
           }
@@ -1019,12 +1059,12 @@ export default {
         }
       });
       chart.on('legendselectchanged', function(params){
-        that.selectedLinesOnGraph = params.selected
+        that.filterSelectedLinesOnGraph = params.selected
       });
 
       // open div
-      document.getElementById("graph-detail").style.left = "50%"
-      document.getElementById("graph-detail").style.width = "50%"
+      document.getElementById("graph-detail-filter").style.left = "50%"
+      document.getElementById("graph-detail-filter").style.width = "50%"
     },
     retrievalTimestamp(params){
       var pos = d3.bisect(this.filterTimestamp, params.value.replace(/"/g, ''));
@@ -1105,6 +1145,7 @@ export default {
         }else{
           params = express.includes(' > ') ? {'name':express.split(' ')[2], 'operate':'<', 'value':express.split(' ')[0]} : {'name':express.split(' ')[2], 'operate':'>', 'value':express.split(' ')[0]}
         }
+        this.cmdWords.push(params.name)
         return this.retrievalKvRange(params)
       }else if(express.includes('=')){
         if (express.split(' ')[0][0] == '@') { //judge word first char is @
@@ -1112,17 +1153,21 @@ export default {
         }else{
           params = {'name':express.split(' ')[2], 'operate':'=', 'value':express.split(' ')[0]}
         }
+        this.cmdWords.push(params.name)
         return this.retrievalKvEqual(params)
       }else{
         var words = express.split(' ')
         words.forEach((word, index) => {
           if(index < words.length - 1){
             if (word == '&') {
+              this.cmdWords.push(words[index + 1])
               params.push({'operate':'&', 'name':words[index + 1]})
             }else if(word == '|'){
+              this.cmdWords.push(words[index + 1])
               params.push({'operate':'|', 'name':words[index + 1]})
             }
             if (index == 0) { // first word default |
+              this.cmdWords.push(word)
               params.push({'operate':'|', 'name':word})
             }
           }
@@ -1130,73 +1175,82 @@ export default {
         return this.retrievalSymbol(params)
       }
     },
-    filter(cmd){
-      // cmd = 'txlProcBranchH & (pmb | txAtt) & ((pma.0 > 11) & ((@timestamp > "2022-09-27 13:30:30") & (@timestamp < "2022-09-27 13:31:30.675762960")))'
-      // { '0':
-      // [ '(pmb | txAtt)',
-      //   '((pma.0 > 11) & ((@timestamp > "2022-09-27 13:30:30") & (@timestamp < "2022-09-27 13:31:30.675762960")))' ],
-      // '1':
-      // [ '(pma.0 > 11)',
-      //   '((@timestamp > "2022-09-27 13:30:30") & (@timestamp < "2022-09-27 13:31:30.675762960"))' ],
-      // '2':
-      // [ '(@timestamp > "2022-09-27 13:30:30")',
-      //   '(@timestamp < "2022-09-27 13:31:30.675762960")' ] }
-      
-      // sort parentheses by priority. The deeper the nesting, the higher the priority.
-      var leftP = []                                        
-      var res = {}
-      for (var i = 0; i < cmd.length; i++) {
-        if (cmd[i] == '('){
-            leftP.push(i)
+    filter(){
+      try{
+        this.filterExp = []
+        this.filtergraphLogData = []
+        this.filteredKeyWords = []
+        this.filterfilterGraphs = []
+        var cmd = document.getElementById("cmd").value
+        // var cmd = 'txlProcBranchH & (pmb | txAtt) & ((@Pma(c).0 > 11) & ((@timestamp > "2022-09-27 13:32:35.606385800") & (@timestamp < "2022-09-27 13:35:30.675762960")))'
+        // { '0':
+        // [ '(pmb | txAtt)',
+        //   '((pma.0 > 11) & ((@timestamp > "2022-09-27 13:30:30") & (@timestamp < "2022-09-27 13:31:30.675762960")))' ],
+        // '1':
+        // [ '(pma.0 > 11)',
+        //   '((@timestamp > "2022-09-27 13:30:30") & (@timestamp < "2022-09-27 13:31:30.675762960"))' ],
+        // '2':
+        // [ '(@timestamp > "2022-09-27 13:30:30")',
+        //   '(@timestamp < "2022-09-27 13:31:30.675762960")' ] }
+        
+        // sort parentheses by priority. The deeper the nesting, the higher the priority.
+        var leftP = []                                        
+        var res = {}
+        for (var i = 0; i < cmd.length; i++) {
+          if (cmd[i] == '('){
+              leftP.push(i)
+          }
+          if (cmd[i] == ')'){
+            var priority = leftP.length
+            var exp = cmd.slice(leftP.pop(), i+1)
+            if ((exp != '(c)')&(exp != '(d)')&(exp != '(r)')) {
+              if (!res.hasOwnProperty(priority)) {
+                res[priority] = [exp]
+              }else{
+                res[priority].push(exp)
+              } 
+            }
+          }
+          res[0] = [cmd]
         }
-        if (cmd[i] == ')'){
-          var priority = leftP.length
-          var exp = cmd.slice(leftP.pop(), i+1)
-          if ((exp != '(c)')&(exp != '(d)')&(exp != '(r)')) {
-            if (!res.hasOwnProperty(priority)) {
-              res[priority] = [exp]
+        // { '2_0': '(@timestamp > "2022-09-27 13:30:30")',
+        //   '2_1': '(@timestamp < "2022-09-27 13:31:30.675762960")',
+        //   '1_0': '(pma.0 > 11)',
+        //   '1_1': '(exp2_0 & exp2_1)',
+        //   '0_0': '(pmb | txAtt)',
+        //   '0_1': '(exp1_0 & exp1_1)' }
+        // Calculation deeper by deeper
+        var priority = Object.keys(res)
+        priority.reverse()
+        priority.forEach((p, pindex) => {
+          res[p].forEach((express, eindex) => {
+            if (res.hasOwnProperty(parseInt(p)+1)) {
+              res[parseInt(p)+1].forEach((expName, nindex) => {
+                if (express.includes(expName)) {
+                  express = express.replace(expName, '@exp'+String(parseInt(p)+1)+'_'+String(nindex))
+                }
+              })
+              this.filterExp['@exp'+String(p)+'_'+String(eindex)] = this.calExpress(express)
             }else{
-              res[priority].push(exp)
-            } 
-          }
-        }
-        res[0] = [cmd]
-      }
-      // { '2_0': '(@timestamp > "2022-09-27 13:30:30")',
-      //   '2_1': '(@timestamp < "2022-09-27 13:31:30.675762960")',
-      //   '1_0': '(pma.0 > 11)',
-      //   '1_1': '(exp2_0 & exp2_1)',
-      //   '0_0': '(pmb | txAtt)',
-      //   '0_1': '(exp1_0 & exp1_1)' }
-      // Calculation deeper by deeper
-      var priority = Object.keys(res)
-      priority.reverse()
-      priority.forEach((p, pindex) => {
-        res[p].forEach((express, eindex) => {
-          if (res.hasOwnProperty(parseInt(p)+1)) {
-            res[parseInt(p)+1].forEach((expName, nindex) => {
-              if (express.includes(expName)) {
-                express = express.replace(expName, '@exp'+String(parseInt(p)+1)+'_'+String(nindex))
-              }
-            })
-            this.filterExp['@exp'+String(p)+'_'+String(eindex)] = this.calExpress(express)
-          }else{
-            this.filterExp['@exp'+String(p)+'_'+String(eindex)] = this.calExpress(express)
-          }
+              this.filterExp['@exp'+String(p)+'_'+String(eindex)] = this.calExpress(express)
+            }
+          })
         })
-      })
-      return this.filterExp['@exp0_0'].map(v => {return parseInt(v)}).sort()
+        this.packageFilteredData(this.filterExp['@exp0_0'].map(v => {return parseInt(v)}).sort())
+      }
+      catch(err){
+        console.log(err)
+        alert('Syntax format error!')
+      }
     },
-    packageFilteredData(){
+    packageFilteredData(res){
       // var cmd = 'txlProcBranchH & (pmb | txAtt) & ((@Pma(c).0 > 11) & ((@timestamp > "2022-09-27 13:32:35.606385800") & (@timestamp < "2022-09-27 13:35:30.675762960")))'
       // var res = this.filter(cmd)
-      this.graphLogData = []
-      var res = [21481, 21484, 21487, 21498, 21510, 21533, 21658, 21772, 21861, 21918, 22233, 22274, 22771, 22895, 23150, 23281, 23291, 23299, 23302, 23339, 23361, 23401, 23500]
+      // var res = [21481, 21484, 21487, 21498, 21510, 21533, 21658, 21772, 21861, 21918, 22233, 22274, 22771, 22895, 23150, 23281, 23291, 23299, 23302, 23339, 23361, 23401, 23500]
       res = res.map(v => String(v))
       res.forEach((num) => {
-        this.graphLogData.push(this.filterOriginLogs[num])
+        this.filterGraphLogData.push(this.filterOriginLogs[num])
       })
-
       Object.keys(this.filterKeyWords).forEach((keyword) => {
         var globalIndices = this.filterKeyWords[keyword].map(a => a.globalIndex);
         var ret = this.$common.arrayIntersection(res,globalIndices)
@@ -1204,8 +1258,9 @@ export default {
           this.filteredKeyWords[keyword] = ret
         }
       })
-      this.keyWordsTree = this.$common.generateFilterKeyWordsTree(this.filteredKeyWords)
+      this.filterKeyWordsTree = this.$common.generateFilterKeyWordsTree(this.filteredKeyWords)
       this.createKeyWordsTreeGraph()
+      this.$common.removeAllChildDom('content-filter')
       this.openFilterLogDetail(0, true)
     },
 //////////////////////////// COMMON //////////////////////////
@@ -1230,14 +1285,13 @@ export default {
       if(this.viewMode == 'standard'){
         this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs)
       }else{
-        this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterfilterGraphs)
+        this.$common.createTreeSvg(this.filterKeyWordsTree, this.svgKeywordsTree, this.filterfilterGraphs)
       }
     },
-    createLegendConfigModal(){
+    createLegendConfigModal(lines, select){
       let that = this
-
       this.$common.removeAllChildDom('legend-config')
-      this.selectableLines.forEach((key) => {
+      lines.forEach((key) => {
         var ul = document.createElement("ul")
         var li = document.createElement("li")
         li.setAttribute('class', 'li-legend')
@@ -1250,10 +1304,10 @@ export default {
         inputCheckBox.setAttribute('type', "checkbox")
         // inputCheckBox.setAttribute('class', "left")
         inputCheckBox.onclick = function() {
-          if (that.selectedLines.hasOwnProperty(key)) {
-            delete that.selectedLines[key]
+          if (select.hasOwnProperty(key)) {
+            delete select[key]
           }else{
-            that.selectedLines[key] = {}
+            select[key] = {}
           }
         }
         // key label
@@ -1303,9 +1357,16 @@ export default {
       })
     },
     packageSelectedLinesYAxis(){
-      Object.keys(this.selectedLines).forEach((key) => {
-        this.selectedLines[key] = document[key][key].value
-      })
+      if (this.viewMode == 'standard') {
+        Object.keys(this.selectedLines).forEach((key) => {
+          this.selectedLines[key] = document[key][key].value
+        })
+      }else{
+        Object.keys(this.filterSelectedLines).forEach((key) => {
+          this.filterSelectedLines[key] = document[key][key].value
+        })
+      }
+
     },
     openKeyWordsTreeModal(){
       var modal = document.getElementById("keywords-modal")
@@ -1316,6 +1377,7 @@ export default {
       modal.style.display = "none"
     },
     initHighlightModal(){
+      let that = this
       Object.keys(this.highlightKeyword).forEach((key) => {
         var li = document.createElement("li");
         li.setAttribute('class', "li-highlight")
@@ -1395,13 +1457,15 @@ export default {
     exportExcel(){
       var res = {}
       var item = {}
-      Object.keys(this.selectedLinesOnGraph).forEach((line) => {
-        if((this.selectedLinesOnGraph[line] == true)&(!line.includes('highlight'))){
+      var selectedLines = this.viewMode == 'standard' ? this.selectedLinesOnGraph : this.filterSelectedLinesOnGraph
+      var allLines = this.viewMode == 'standard' ? this.allLine : this.filterAllLine
+      Object.keys(selectedLines).forEach((line) => {
+        if((selectedLines[line] == true)&(!line.includes('highlight'))){
           item[line] = null
         }
       })
       Object.keys(item).forEach((line) => {
-        this.allLine[line].forEach((e) => {
+        allLines[line].forEach((e) => {
           var tmp = {}
           tmp['timestamp'] = e.timestamp
           Object.keys(item).forEach((k) => {
@@ -1433,30 +1497,52 @@ export default {
       link.click()
     },
     zoomLogDetal(){
-      if(this.isLogFullScreen == false){
+      var logElm = this.viewMode == 'standard' ? "log-detail-standard" : 'log-detail-filter'
+      var graphElm = this.viewMode == 'standard' ? "graph-detail-standard" : 'graph-detail-filter'
+      if (this.viewMode == 'standard') {
+        if(this.isLogFullScreen == false){
         this.isLogFullScreen = true
-        document.getElementById("log-detail").style.width = "100%";
-        document.getElementById("graph-detail").style.left = "100%";
-        document.getElementById("graph-detail").style.width = "0%";
+        document.getElementById(logElm).style.width = "100%";
+        document.getElementById(graphElm).style.left = "100%";
+        document.getElementById(graphElm).style.width = "0%";
+        }else{
+          this.isLogFullScreen = false
+          document.getElementById(logElm).style.width = "50%";
+          document.getElementById(graphElm).style.left = "50%";
+          document.getElementById(graphElm).style.width = "50%";
+        }
       }else{
-        this.isLogFullScreen = false
-        document.getElementById("log-detail").style.width = "50%";
-        document.getElementById("graph-detail").style.left = "50%";
-        document.getElementById("graph-detail").style.width = "50%";
+        if(this.isFilterLogFullScreen == false){
+          this.isFilterLogFullScreen = true
+          document.getElementById(logElm).style.width = "100%";
+          document.getElementById(graphElm).style.left = "100%";
+          document.getElementById(graphElm).style.width = "0%";
+        }else{
+          this.isFilterLogFullScreen = false
+          document.getElementById(logElm).style.width = "50%";
+          document.getElementById(graphElm).style.left = "50%";
+          document.getElementById(graphElm).style.width = "50%";
+        }
       }
-
     },
     modeSwitch(){
       if ((this.prevViewMode == 'standard') & (this.viewMode == 'overview')) {
-        document.getElementById("log-detail").style.width = "0%";
-        document.getElementById("graph-detail").style.width = "0%";
+        document.getElementById("log-detail-standard").style.width = "0%";
+        document.getElementById("graph-detail-standard").style.width = "0%";
       }else if((this.prevViewMode == 'filter') & (this.viewMode == 'overview')) {
-        document.getElementById("log-detail").style.width = "0%";
-        document.getElementById("graph-detail").style.width = "0%";
-      }else if(this.viewMode == 'filter') {
-        
+        document.getElementById("log-detail-filter").style.width = "0%";
+        document.getElementById("graph-detail-filter").style.width = "0%";
+      }else if((this.prevViewMode == 'standard') & (this.viewMode == 'filter')) {
+        document.getElementById("log-detail-standard").style.width = "0%";
+        document.getElementById("graph-detail-standard").style.width = "0%";
+        this.createKeyWordsTreeGraph()
+        this.createLegendConfigModal(this.filterSelectableLines, this.filterSelectedLines)
+      }else if((this.prevViewMode == 'filter') & (this.viewMode == 'standard')) {
+        document.getElementById("log-detail-filter").style.width = "0%";
+        document.getElementById("graph-detail-filter").style.width = "0%";
+        this.createKeyWordsTreeGraph()
+        this.createLegendConfigModal(this.selectableLines, this.selectedLines)
       }
-      
     },
     logs () {
       console.log(d3.select("#canvas0").node())
@@ -1501,7 +1587,7 @@ html,body {
 }
 
 /***************************************** log detail css */
-.overlay-log {
+.overlay-log-standard {
   height: 100%;
   width: 0;
   position: fixed;
@@ -1513,7 +1599,32 @@ html,body {
   transition: 0.5s;
 }
 
-.overlay-graph {
+.overlay-graph-standard {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  background-color: rgb(0, 0, 0);
+  overflow-x: scroll;
+  transition: 0.5s;
+}
+
+.overlay-log-filter {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  background-color: rgb(0, 0, 0);
+  overflow-x: scroll;
+  transition: 0.5s;
+
+}
+
+.overlay-graph-filter {
   height: 100%;
   width: 0;
   position: fixed;
