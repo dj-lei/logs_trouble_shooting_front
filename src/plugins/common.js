@@ -300,24 +300,19 @@ export default {
           name.push(tmp.parent.data.name.replace("(","").replace(")",""))
           tmp = tmp.parent
         }
-        var process_key_name = name.slice(0, name.length-2)
+        var process_key_name = name.slice(0, name.length-1)
         process_key_name.reverse()
         process_key_name = process_key_name.join("__")
 
         name.reverse()
         d.id = name.join("__");
         d._children = d.children;
-
+        // console.log(process_key_name)
         Object.keys(filterData).forEach((key) => {
-          var tmp2 = key.split('__').slice(2, key.split('__').length).join('__')
-          if (key.includes(process_key_name)){
+          var tmp1 = key.split('__').slice(0, 2).join('__')
+          var tmp2 = key.split('__')[0]
+          if ((process_key_name == tmp1) | (process_key_name == tmp2)){
             flag = true
-            if (tmp2 == process_key_name){
-              if(d.id != key){
-                filterData[d.id] = filterData[key]
-                delete filterData[key]
-              }
-            }
           }
         })
 
@@ -373,29 +368,31 @@ export default {
             .attr("stroke-opacity", 0)
             .on("click", (event, d) => {
               d.children = d.children ? null : d._children;
+              var filterId = d.id.replace("KeyWords__", "")
               if (d._children) {
               }else{
-                if (filterData.hasOwnProperty(d.id)){
-                  delete filterData[d.id]
-                  d3.select("#circle"+String(d.id)).attr("fill", "#999")
-                  d3.select("#text"+String(d.id)).attr("stroke", "white")
+                if (filterData.hasOwnProperty(filterId)){
+                  delete filterData[filterId]
+                  d3.select("#circle"+String(d.id).replace(/\./g, '_')).attr("fill", "#999")
+                  d3.select("#text"+String(d.id).replace(/\./g, '_')).attr("fill", "#FFF")
+                  d3.select("#text"+String(d.id).replace(/\./g, '_')).attr("stroke", "#FFF")
                 }else{
-                  if (d.depth == 4){
-                    filterData[d.id] = [d.parent.parent.data.name, d.parent.data.name + d.data.name]
+                  if (d.id.includes('__bit')){
+                    filterData[filterId] = [d.parent.parent.data.name, d.parent.data.name + d.data.name]
                   }else{
-                    filterData[d.id] = [d.parent.data.name, d.data.name]
+                    filterData[filterId] = [d.parent.data.name, d.data.name]
                   }
-                  d3.select("#circle"+String(d.id)).attr("fill", "#33CC00")
-                  d3.select("#text"+String(d.id)).attr("stroke", "#33CC00")
+                  d3.select("#circle"+String(d.id).replace(/\./g, '_')).attr("fill", "#33CC00")
+                  d3.select("#text"+String(d.id).replace(/\./g, '_')).attr("fill", "#33CC00")
+                  d3.select("#text"+String(d.id).replace(/\./g, '_')).attr("stroke", "#33CC00")
                 }
               }
-              // console.log(d)
               update(d);
             });
     
         nodeEnter.append("circle")
             .attr("r", 2.5)
-            .attr("id", d => "circle"+String(d.id))
+            .attr("id", d => "circle"+String(d.id).replace(/\./g, '_'))
             .attr("fill", d => {
                 if (filterData.hasOwnProperty(d.id)){
                   return "#33CC00"
@@ -409,7 +406,7 @@ export default {
             .attr("stroke-width", 10);
     
         nodeEnter.append("text")
-            .attr("id", d => "text"+String(d.id))
+            .attr("id", d => "text"+String(d.id).replace(/\./g, '_'))
             .attr("dy", "0.31em")
             .attr("x", d => d._children ? -6 : 6)
             .attr("text-anchor", d => d._children ? "end" : "start")
@@ -468,10 +465,10 @@ export default {
     },
 
     syncTreeAndFilterData(svg, filterData){
-      // console.log(svg.node())
       Object.keys(filterData).forEach((key) => {
-        d3.select("#circle"+key).attr("fill", "#33CC00")
-        d3.select("#text"+key).attr("stroke", "#33CC00")
+        d3.select("#circle"+"KeyWords__"+key.replace(/\./g, '_')).attr("fill", "#33CC00")
+        d3.select("#text"+"KeyWords__"+key.replace(/\./g, '_')).attr("fill", "#33CC00")
+        d3.select("#text"+"KeyWords__"+key.replace(/\./g, '_')).attr("stroke", "#33CC00")
       })
     },
 
@@ -842,35 +839,57 @@ export default {
 
     generateKeyWordsTree(data){
       var res = {'name': 'KeyWords'}
-      var indices = []
-      Object.keys(data).forEach((index) => {
-        // res['children'].push({'name':index, 'children': []})
-        var devs = []
-        Object.keys(data[index]).forEach((dev) => {
-          var processes = []
-          Object.keys(data[index][dev]).forEach((process) => {
-            var keywords = []
-            Object.keys(data[index][dev][process]).forEach((keyword) => {
-              if (keyword.includes('(r)')) {
-                var bits = []
-                for(var i=0; i < 32; i++ ){
-                  bits.push({'name': 'bit'+String(i)})
-                }
-                keywords.push({'name':keyword, 'children': bits})
-              }else if (keyword.includes('(d)')){
-                keywords.push({'name':keyword, 'value': 'discrete'})
-              }else{
-                keywords.push({'name':keyword, 'value': 'continuous'})
-              }
-            })
-            processes.push({'name': process, 'children': keywords})
-          })
-          indices.push({'name': index, 'children': processes})
+      var processes = []
+      Object.keys(data).forEach((process) => {
+        var keywords = []
+        Object.keys(data[process]).forEach((keyword) => {
+          if (keyword.includes('(r)')) {
+            var bits = []
+            for(var i=0; i < 32; i++ ){
+              bits.push({'name': 'bit'+String(i)})
+            }
+            keywords.push({'name':keyword, 'children': bits})
+          }else if (keyword.includes('(d)')){
+            keywords.push({'name':keyword, 'value': 'discrete'})
+          }else{
+            keywords.push({'name':keyword, 'value': 'continuous'})
+          }
         })
-        // indices.push({'name': index, 'children': devs})
+        processes.push({'name': process, 'children': keywords})
       })
-      res['children'] = indices
+      res['children'] = processes
       return res
+    },
+
+    generateFilterKeyWordsTree(data){
+      var res = {'name': 'KeyWords'}
+      var keywords = []
+      Object.keys(data).forEach((keyword) => {
+        if (keyword.includes('(r)')) {
+          var bits = []
+          for(var i=0; i < 32; i++ ){
+            bits.push({'name': 'bit'+String(i)})
+          }
+          keywords.push({'name':keyword, 'children': bits})
+        }else if (keyword.includes('(d)')){
+          keywords.push({'name':keyword, 'value': 'discrete'})
+        }else{
+          keywords.push({'name':keyword, 'value': 'continuous'})
+        }
+      })
+      res['children'] = keywords
+      return res
+    },
+
+    exportConfig(filterData, highlightKeyword){
+      var res = {}
+      res['filterData'] = filterData
+      res['highlightKeyword'] = highlightKeyword
+      this.exportJosnToLocalTxt(res, 'config.txt')
+    },
+
+    loadConfig(){
+      document.getElementById('fileInput').click()
     },
 
     exportJosnToLocalTxt(content, fileName){

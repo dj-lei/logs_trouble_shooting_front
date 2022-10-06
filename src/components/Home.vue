@@ -9,7 +9,8 @@
     div(class="page-right")
       div(id="topnav" class="home-topnav")
         a(@click="openUploadModal") UPLOAD
-        a(@click="go") GO
+        a(@click="goCompareView") GO COMPARE
+        a(@click="goLogicView") GO LOGIC
         input(id="fileInput" type="file" style="display:none")
       div(class="split left")
         input(id="input1" type="text" name="search" placeholder="Search.." required v-on:keyup="filter")
@@ -19,22 +20,6 @@
         div(class="groups")
           ul(id="groups2")
         div(id="highlight-modal" class="modal")
-    //- div(id="upload-modal" class="modal")
-    //-   div(class="modal-content")
-    //-       div(class="modal-header")
-    //-         h2 Log Prefix & Upload
-    //-         form
-    //-           label Platform: 
-    //-           input(type="text" id="platform" placeholder="visby oslo or ...")
-    //-           label Product: 
-    //-           input(type="text" id="product" placeholder="6626 4485 or ...")
-    //-           label Category: 
-    //-           input(type="text" id="category" placeholder="lab or customer")
-    //-           label UniqueId: 
-    //-           input(type="text" id="uniqueid" placeholder="Unique identification")
-    //-       div(class="modal-footer")
-    //-         button(id="submit" class="button" @click="submit" disabled) Submit
-    //-         button(id="select" class="button" @click="select") Select
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
         div
@@ -60,18 +45,11 @@ export default {
     this.getIndices()
     this.scheduled()
     document.getElementById('fileInput').onchange = function () {
-      // document.getElementById('submit').disabled = false
       var file = document.getElementById("fileInput").files
       if (file.length > 0) {
         that.submit()
       }
     };
-
-    // window.onclick = function(event) {
-    //   if (event.target == document.getElementById("upload-modal")) {
-    //     that.closeUploadModal();
-    //   }
-    // }
   },
   methods: {
     scheduled(){
@@ -167,8 +145,6 @@ export default {
       }
     },
     openUploadModal(){
-      // var modal = document.getElementById("upload-modal")
-      // modal.style.display = "block"
       document.getElementById('fileInput').click()
     },
     closeUploadModal(){
@@ -182,33 +158,10 @@ export default {
       document.getElementById('fileInput').click()
     },
     async submit(){
-      // if((document.getElementById("platform").value == '') | (document.getElementById("product").value === '') | (document.getElementById("category").value == '') | (document.getElementById("uniqueid").value == '')){
-      //   alert("Platform or Product or Category or Uniqueid must write something!");
-      //   return
-      // }
       var file = document.getElementById("fileInput").files[0];
-      // var dup = []
-      // for (let file of files){
-      //   var name = document.getElementById("platform").value.toLowerCase() + "_" + document.getElementById("product").value.toLowerCase() + "_" + document.getElementById("category").value.toLowerCase() + "_" + document.getElementById("uniqueid").value.toLowerCase() + "_" + file.name.toLowerCase()
-      //   if(this.indices.includes(name)){
-      //     dup.push(name)
-      //   }
-      // }
-      // if(dup.length > 0){
-      //   alert(`File combine name is not unique: ${dup.join(",")}`);
-      //   return
-      // }
-      
       this.$common.startLoading()
       let formData = new FormData()
-      // for (let file of files){
-      //   formData.append("file[]", file);
-      // }
       formData.append("file", file);
-      // formData.append("platform", document.getElementById("platform").value);
-      // formData.append("product", document.getElementById("product").value);
-      // formData.append("category", document.getElementById("category").value);
-      // formData.append("uniqueid", document.getElementById("uniqueid").value);
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -234,6 +187,61 @@ export default {
       let routeData = this.$router.resolve({path: '/compareview', query:{index: params.join(",")}});
       window.open(routeData.href, '_blank');
     },
+    async goCompareView(){
+      var ul, li, i
+      var params = []
+      ul = document.getElementById("groups2");
+      li = ul.getElementsByTagName("li");
+      for (i = 0; i < li.length; i++) {
+        params.push(li[i].innerText.split(/\n/)[0])
+      }
+      await this.$http.get(this.$urls.logs_trouble_shooting, {
+          params: {
+            index: params[0]
+          },
+          })
+        .then(response => {
+          console.log(response.data.content)
+      })
+    },
+    async goLogicView(){
+      var ul, li, i
+      var params = []
+      ul = document.getElementById("groups2");
+      li = ul.getElementsByTagName("li");
+      for (i = 0; i < li.length; i++) {
+        params.push(li[i].innerText.split(/\n/)[0])
+      }
+
+      let routeData = this.$router.resolve({path: '/logicview', query:{index: params[0]}})
+      window.open(routeData.href, '_blank');
+    }
+
+      // await this.$http.get(this.$urls.logs_trouble_shooting, {
+      //     params: {
+      //       index: params[0]
+      //     },
+      //     responseType: 'blob',
+      //     })
+      //   .then(response => {
+      //   var blob = response.data
+      //   var arrayBuffer;
+      //   var fileReader = new FileReader();
+      //   fileReader.readAsArrayBuffer(blob);
+
+      //   fileReader.onload = function() {
+      //     // console.log(e)
+      //     arrayBuffer = fileReader.result;
+      //     try {
+      //       let result = pako.inflate(arrayBuffer, {"to": "string"});
+      //       let obj = JSON.parse(result);
+      //       console.log(obj);
+      //     } catch (err) {
+      //       console.log("Error " + err);
+      //     }
+      //   };
+        
+      // })
   }
 
 }
