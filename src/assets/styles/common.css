@@ -6,6 +6,7 @@
     margin-top: 30px;
     color: #FFA500;
     text-decoration: none;
+    display: none;
 }
 
 .zoom-btn:hover {
@@ -47,8 +48,8 @@
 }
 
 .topnav input[type=text] {
-    float: left;
-    width: 40%;
+    position: absolute;
+    width: 10%;
     padding: 6px;
     margin-left: 2px;
     border: none;
@@ -62,6 +63,35 @@
     width: 100%;
 }
 
+.topnav-drop-down{
+  z-index: 1;
+  position: fixed;
+  width: 40%;
+  overflow: hidden;
+  list-style-type: none; /* Remove bullets */
+  padding: 0; /* Remove padding */
+  margin: 0; /* Remove margins */
+  margin-top: 35px;
+}
+
+.topnav-drop-down li {
+  border: 1px solid #ddd; /* Add a thin border to each list item */
+  background-color: #000000; /* Add a grey background color */
+  color: #fff;
+  padding: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 222px;
+}
+
+.topnav-drop-down li:hover,
+.topnav-drop-down li:focus {
+  background-color: #666;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/***************************************** checkmark */
 .container {
     float: right;
     padding-left: 10px;

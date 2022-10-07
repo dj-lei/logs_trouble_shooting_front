@@ -3,21 +3,19 @@
     div(id="topnav" class="topnav")
       template(v-if="viewMode === 'standard'")
         a(class="btn" @click="openHighlightModal") Highlight
-        a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
+        //- a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="btn" @click="$common.exportConfig(filterGraphs, highlightKeyword)") ExportConfig
         a(class="btn" @click="$common.loadConfig") LoadConfig
-        a(class="btn" @click="exportExcel") Export
         //- a(class="index") {{process}}
       template(v-else-if="viewMode === 'overview'")
         a(class="btn" @click="openHighlightModal") Highlight
         //- a(class="index") {{index}}
       template(v-else-if="viewMode === 'filter'")
         //- a(class="btn" @click="openHighlightModal") Highlight
-        a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
+        //- a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
         //- a(class="btn" @click="$common.exportConfig(viewMode, filterGraphs)") ExportConfig
         //- a(class="btn" @click="$common.loadConfig") LoadConfig
-        a(class="btn" @click="exportExcel") Export
-        input(id="cmd" type="text" placeholder="Search.." v-on:keyup.enter="filter")
+        input(id="cmd" type="text" placeholder="Search.." v-on:keydown="keyDownEvent")
         //- a(class="index") {{process}}
       form(name="viewMode")
         label(class="container") Overview
@@ -31,6 +29,7 @@
           span(class="checkmark")
       label(class="container") View Mode:
       input(id="fileInput" type="file" style="display:none")
+    ul(id="groups" class="topnav-drop-down")
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
@@ -128,6 +127,7 @@ export default {
 
       // filter mode global var
       cmdWords: [],
+      filterFirstEntry: true,
       filterInvertedIndexTable:{},
       filterOriginLogs:{},
       filterKeyWords:{},
@@ -140,9 +140,15 @@ export default {
       filterSelectedLines: {},
       filterSelectedLinesOnGraph:{},
       filterAllLine: {},
-      filterGraphLogData: [],
+      filterGraphLogData: {},
       isFilterLogFullScreen: false,
       isFilterGraphFullScreen: false,
+
+      arrowEventNum:-1,
+      arrowEventNumMax:0,
+      inputWord:'',
+      inputCursorStart:0,
+      keyAndWordFlag: false,
 
       viewMode: 'standard',
       prevViewMode: '',
@@ -166,7 +172,11 @@ export default {
       graphWidth: 1000,
     }
   },
-
+  watch:{
+    isGraphFullScreen(n, o) {
+      // console.log(n)
+    }
+  },
   mounted () {
     let that = this
     this.$common.startLoading()
@@ -208,9 +218,6 @@ export default {
         // that.openLogDetail(0, true)
       }else{
         that.refreshFilterSelectableLines()
-        // that.$common.removeAllChildDom('content-filter')
-        // that.filterGraphLogData = []
-        // that.openFilterLogDetail(0, true)
       }
       document.getElementById("keywords-modal").style.display = "none";
     }else if(event.target == document.getElementById("legend-config-modal")){
@@ -249,11 +256,11 @@ export default {
             that.prevViewMode = that.viewMode
             that.viewMode = this.value
             that.modeSwitch()
-            that.$common.startLoading()
+            // that.$common.startLoading()
             if (this.value == 'filter') {
-              if(that.filterTimestamp.length == 0){
-                that.initFilterMode()
+              if(that.filterFirstEntry){
                 that.openFilterLogDetail(0, true)
+                that.filterFirstEntry = false
               }
               if(that.isFilterGraphFullScreen == true){
                 document.getElementById("graph-detail-filter").style.left = "0%"
@@ -284,7 +291,7 @@ export default {
                 that.createHighlightPoint()
               }
             }
-            that.$common.stopLoading()
+            // that.$common.stopLoading()
         });
     }
     this.getIndex(this.index)
@@ -321,7 +328,7 @@ export default {
           //     break
           //   }
           // }
-
+          this.initFilterMode()
           this.$common.stopLoading()
           // this.createGraph(2)
           // this.logs()
@@ -455,7 +462,7 @@ export default {
           Object.keys(that.highlightKeyword).forEach((item) => {
             item.split(/,/).forEach((key) => {
               if (that.invertedIndexTable.hasOwnProperty(key.toLowerCase())){
-                if (that.invertedIndexTable[key]['x'].includes(log[0])){
+                if (that.invertedIndexTable[key.toLowerCase()]['x'].includes(log[0])){
                   style = `<b style="color:${that.highlightKeyword[item]}">`
                 }
               }
@@ -510,7 +517,7 @@ export default {
             const g = this.svg.append("g").attr("transform", (d,i)=>`translate(${this.margin.left} ${this.margin.top})`);
             const groups = g
               .selectAll("g")
-              .data(this.$common.zip(this.invertedIndexTable[key]['x'], this.invertedIndexTable[key]['process']))
+              .data(this.$common.zip(this.invertedIndexTable[key.toLowerCase()]['x'], this.invertedIndexTable[key.toLowerCase()]['process']))
               .enter()
               .append("g")
               .attr("class", "highlight")
@@ -538,6 +545,7 @@ export default {
 ////////////////////////Standard Mode/////////////////////////
     initStandardMode(){
       this.openLogDetail(0, true)
+      document.getElementById("log-detail-standard-zoom-btn").style.display = "block"
     },
     openLogDetail(line, isRefreshGraph) {
       var content = document.getElementById('content-standard')
@@ -557,14 +565,15 @@ export default {
               }
             })
           })
-          if(logIndex <= line){
-            td.style['background-color'] = "#000000"
+          if(logIndex == line){
+            td.style['background-color'] = "#000080"
+            td.style['border'] = "1px solid #FFA500"
           }
           td.innerText = this.graphLogData[num]['timestamp'] + ':' + this.graphLogData[num]['msg']
           tr.appendChild(td)
           content.appendChild(tr)
         })
-        document.getElementById(`log${line}`).scrollIntoView(true)
+        document.getElementById(`log${line > 2 ? line - 2 : line}`).scrollIntoView(true)
       }
       
       document.getElementById("log-detail-standard").style.width = "50%"
@@ -637,7 +646,7 @@ export default {
         var globalIndex = this.keyWords[process][keyword][this.keyWords[process][keyword].length - 1]
         
         if (line.includes('(d)')){
-          var categories = this.arrayDuplicates(value)
+          var categories = this.$common.arrayDuplicates(value)
         }
 
         // config yaxis
@@ -655,7 +664,7 @@ export default {
           },
           position: this.selectedLines[line], // left or right
           offset: 30 * parseInt(yAxisIndex / 2),
-          // data: line.includes('(d)') ? categories : null
+          data: line.includes('(d)') ? categories : null
         })
 
         // package xaxis data
@@ -756,15 +765,6 @@ export default {
       option['xAxis']['type'] = 'value'
       // install tool button 
       option['toolbox']['feature'] = {
-        myTool2:{
-          show:true,
-          title: 'Edit',
-          icon: 'path://M499.2 281.6l243.2 243.2L413.866667 853.333333H170.666667v-243.2l328.533333-328.533333z m0 123.733333L256 648.533333V768h119.466667l243.2-243.2-119.466667-119.466667zM614.4 170.666667L853.333333 413.866667l-72.533333 72.533333-243.2-243.2L614.4 170.666667z',
-          onclick: (e) =>{
-            var modal = document.getElementById("legend-config-modal")
-            modal.style.display = "block"
-          }
-        },
         myTool1:{
           show:true,
           title: 'Zoom Out',
@@ -791,6 +791,32 @@ export default {
 
           }
         },
+        myTool2:{
+          show:true,
+          title: 'Edit',
+          icon: 'path://M499.2 281.6l243.2 243.2L413.866667 853.333333H170.666667v-243.2l328.533333-328.533333z m0 123.733333L256 648.533333V768h119.466667l243.2-243.2-119.466667-119.466667zM614.4 170.666667L853.333333 413.866667l-72.533333 72.533333-243.2-243.2L614.4 170.666667z',
+          onclick: (e) =>{
+            var modal = document.getElementById("legend-config-modal")
+            modal.style.display = "block"
+          }
+        },
+        myTool3:{
+          show:true,
+          title: 'KeyWordsTree',
+          icon: 'path://M554.666667 682.666667h85.333333v128h-213.333333v-128h85.333333v-128H256v128h85.333333v128H128v-128h85.333333v-170.666667h298.666667V384h-85.333333V256h213.333333v128h-85.333333v128h298.666666v170.666667h85.333334v128h-213.333334v-128h85.333334v-128h-256v128z m42.666666-384h-128v42.666666h128V298.666667zM298.666667 725.333333H170.666667v42.666667h128v-42.666667z m597.333333 0h-128v42.666667h128v-42.666667z m-298.666667 0h-128v42.666667h128v-42.666667z',
+          onclick: (e) =>{
+            that.openKeyWordsTreeModal()
+          }
+        },
+        myTool4:{
+          show:true,
+          title: 'Export',
+          icon: 'path://M712.533333 371.2l-128 128-59.733333-59.733333 128-128L597.333333 256l-42.666666-42.666667h256v256l-42.666667-42.666666-55.466667-55.466667zM657.066667 256H768v110.933333V256h-110.933333zM298.666667 298.666667v426.666666h426.666666v-256l85.333334 85.333334v256H213.333333V213.333333h256l85.333334 85.333334H298.666667z',
+          onclick: (e) =>{
+            that.exportExcel()
+          }
+        },
+
       }
       chart.setOption(option)
       chart.on('click', function(params) {
@@ -834,6 +860,7 @@ export default {
           })
         })
       })
+      this.filterKeyWords['timestamp'] = []
 
       this.filterInvertedIndexTable = this.invertedIndexTable
       Object.keys(this.originLogs).forEach((process) => {
@@ -860,6 +887,7 @@ export default {
             count = count + 1
           }
         })
+        var jump = 0
         Object.keys(this.filterGraphLogData).forEach((num, logIndex) => {
           var tr = document.createElement("tr")
           tr.setAttribute('id', `filter-log${logIndex}`)
@@ -871,10 +899,16 @@ export default {
               text = text.replace(re, replaceT)
             }
           })
+
+          if(num == String(line)){
+            tr.style['background-color'] = "#000080"
+            tr.style['border'] = "1px solid #FFA500"
+            jump = logIndex
+          }
           tr.insertAdjacentHTML('beforeend', text)
           content.appendChild(tr)
         })
-        document.getElementById(`filter-log${line}`).scrollIntoView(true)
+        document.getElementById(`filter-log${jump > 2 ? jump - 2 : jump}`).scrollIntoView(true)
       }
       
       document.getElementById("log-detail-filter").style.width = "50%"
@@ -907,7 +941,7 @@ export default {
       let that = this
       this.$common.removeAllChildDom("graphs-filter")
 
-      this.isGraphFullScreen = false
+      this.isFilterGraphFullScreen = false
 
       // package line
       var option = this.$common.getChartConfig()
@@ -939,7 +973,7 @@ export default {
         })
         var globalIndex = this.filteredKeyWords[keyword]
         if (line.includes('(d)')){
-          var categories = this.arrayDuplicates(value)
+          var categories = this.$common.arrayDuplicates(value)
         }
 
         // config yaxis
@@ -957,7 +991,7 @@ export default {
           },
           position: this.filterSelectedLines[line], // left or right
           offset: 30 * parseInt(yAxisIndex / 2),
-          // data: line.includes('(d)') ? categories : null
+          data: line.includes('(d)') ? categories : null
         })
 
         // package xaxis data
@@ -1014,15 +1048,6 @@ export default {
       option['xAxis']['type'] = 'value'
       // install tool button 
       option['toolbox']['feature'] = {
-        myTool2:{
-          show:true,
-          title: 'Edit',
-          icon: 'path://M499.2 281.6l243.2 243.2L413.866667 853.333333H170.666667v-243.2l328.533333-328.533333z m0 123.733333L256 648.533333V768h119.466667l243.2-243.2-119.466667-119.466667zM614.4 170.666667L853.333333 413.866667l-72.533333 72.533333-243.2-243.2L614.4 170.666667z',
-          onclick: (e) =>{
-            var modal = document.getElementById("legend-config-modal")
-            modal.style.display = "block"
-          }
-        },
         myTool1:{
           show:true,
           title: 'Zoom Out',
@@ -1049,13 +1074,37 @@ export default {
 
           }
         },
+        myTool2:{
+          show:true,
+          title: 'Edit',
+          icon: 'path://M499.2 281.6l243.2 243.2L413.866667 853.333333H170.666667v-243.2l328.533333-328.533333z m0 123.733333L256 648.533333V768h119.466667l243.2-243.2-119.466667-119.466667zM614.4 170.666667L853.333333 413.866667l-72.533333 72.533333-243.2-243.2L614.4 170.666667z',
+          onclick: (e) =>{
+            var modal = document.getElementById("legend-config-modal")
+            modal.style.display = "block"
+          }
+        },
+        myTool3:{
+          show:true,
+          title: 'KeyWordsTree',
+          icon: 'path://M554.666667 682.666667h85.333333v128h-213.333333v-128h85.333333v-128H256v128h85.333333v128H128v-128h85.333333v-170.666667h298.666667V384h-85.333333V256h213.333333v128h-85.333333v128h298.666666v170.666667h85.333334v128h-213.333334v-128h85.333334v-128h-256v128z m42.666666-384h-128v42.666666h128V298.666667zM298.666667 725.333333H170.666667v42.666667h128v-42.666667z m597.333333 0h-128v42.666667h128v-42.666667z m-298.666667 0h-128v42.666667h128v-42.666667z',
+          onclick: (e) =>{
+            that.openKeyWordsTreeModal()
+          }
+        },
+        myTool4:{
+          show:true,
+          title: 'Export',
+          icon: 'path://M712.533333 371.2l-128 128-59.733333-59.733333 128-128L597.333333 256l-42.666666-42.666667h256v256l-42.666667-42.666666-55.466667-55.466667zM657.066667 256H768v110.933333V256h-110.933333zM298.666667 298.666667v426.666666h426.666666v-256l85.333334 85.333334v256H213.333333V213.333333h256l85.333334 85.333334H298.666667z',
+          onclick: (e) =>{
+            that.exportExcel()
+          }
+        },
       }
       chart.setOption(option)
       chart.on('click', function(params) {
         if(params['componentType'] != 'markLine'){
-          // that.numLine = params.data.processIndex
-          that.$common.removeAllChildDom('content')
-          that.openFilterLogDetail(that.numLine, false)
+          that.$common.removeAllChildDom('content-filter')
+          that.openFilterLogDetail(params.data.value[0], false)
         }
       });
       chart.on('legendselectchanged', function(params){
@@ -1178,7 +1227,7 @@ export default {
     filter(){
       try{
         this.filterExp = []
-        this.filtergraphLogData = []
+        this.filterGraphLogData = {}
         this.filteredKeyWords = []
         this.filterfilterGraphs = []
         var cmd = document.getElementById("cmd").value
@@ -1249,7 +1298,7 @@ export default {
       // var res = [21481, 21484, 21487, 21498, 21510, 21533, 21658, 21772, 21861, 21918, 22233, 22274, 22771, 22895, 23150, 23281, 23291, 23299, 23302, 23339, 23361, 23401, 23500]
       res = res.map(v => String(v))
       res.forEach((num) => {
-        this.filterGraphLogData.push(this.filterOriginLogs[num])
+        this.filterGraphLogData[num] = this.filterOriginLogs[num]
       })
       Object.keys(this.filterKeyWords).forEach((keyword) => {
         var globalIndices = this.filterKeyWords[keyword].map(a => a.globalIndex);
@@ -1262,6 +1311,93 @@ export default {
       this.createKeyWordsTreeGraph()
       this.$common.removeAllChildDom('content-filter')
       this.openFilterLogDetail(0, true)
+    },
+    keyDownEvent(event){
+      if(event.ctrlKey == true){
+        return
+      }
+      if(event.key == 'ArrowDown'){
+        if (this.arrowEventNum < this.arrowEventNumMax) {
+          if (this.arrowEventNum >= 0) {
+            document.getElementById(`keyword-num${this.arrowEventNum}`).style.backgroundColor = "#000"
+          }
+          this.arrowEventNum = this.arrowEventNum + 1 
+          document.getElementById(`keyword-num${this.arrowEventNum}`).style.backgroundColor = "#666"
+        }
+        event.preventDefault()
+      }else if(event.key == 'ArrowUp'){
+        if(this.arrowEventNum > 0){
+          document.getElementById(`keyword-num${this.arrowEventNum}`).style.backgroundColor = "#000"
+          this.arrowEventNum = this.arrowEventNum - 1
+          document.getElementById(`keyword-num${this.arrowEventNum}`).style.backgroundColor = "#666"
+        }
+        event.preventDefault()
+      }else if(event.key == 'Enter'){
+        if(this.arrowEventNum >= 0){
+          var cmd = document.getElementById('cmd')
+          var tmp = cmd.value.substring(0, this.inputCursorStart) + document.getElementById(`keyword-num${this.arrowEventNum}`).innerHTML
+          cmd.value =  tmp + cmd.value.substring(this.inputCursorStart + this.inputWord.length, cmd.value.length)
+          document.getElementById("cmd").selectionEnd = tmp.length
+          this.$common.removeAllChildDom('groups')
+          this.inputWord = ''
+          this.keyAndWordFlag = false
+          this.arrowEventNum = -1
+        }else{
+          this.$common.removeAllChildDom('groups')
+          this.inputWord = ''
+          this.keyAndWordFlag = false
+          this.arrowEventNum = -1
+          this.filter()
+        }
+      }else if(event.key == 'Backspace'){
+        if(this.inputWord.length > 0){
+          this.inputWord = this.inputWord.slice(0, this.inputWord.length - 1)
+          this.filterKeyWordsEvent()
+        }
+      }else if(event.code == 'Space'){
+        this.$common.removeAllChildDom('groups')
+        this.inputWord = ''
+      }else if(event.key == '@'){
+        this.keyAndWordFlag = true
+      }else if((event.key.length == 1)&(!['&','|','=','>','<','(',')','.','\"'].includes(event.key))){
+        if(this.inputWord == ''){
+          if(event.key.match(/[0-9]/g)){
+            return
+          }else{
+            this.inputCursorStart = document.getElementById("cmd").selectionStart
+          }
+        }
+        this.inputWord = this.inputWord + event.key 
+        this.filterKeyWordsEvent()
+      }
+    },
+    filterKeyWordsEvent(){
+      let that = this
+      this.$common.removeAllChildDom('groups')
+      this.arrowEventNum = -1
+      var num = 0
+
+      var indices_sort = this.keyAndWordFlag == true ? Object.keys(this.filterKeyWords).sort() : Object.keys(this.filterInvertedIndexTable).sort()
+      indices_sort.forEach((word) => {
+        if (word.toUpperCase().indexOf(this.inputWord.toUpperCase()) > -1) {
+          var li = document.createElement("li")
+          li.setAttribute('id', `keyword-num${num}`)
+          li.innerText = word
+          li.onclick = function(){
+            var cmd = document.getElementById('cmd')
+            var tmp = cmd.value.substring(0, that.inputCursorStart) + word
+            cmd.value =  tmp + cmd.value.substring(that.inputCursorStart + that.inputWord.length, cmd.value.length)
+            document.getElementById("cmd").selectionEnd = tmp.length
+            that.$common.removeAllChildDom('groups')
+            that.inputWord = ''
+            that.keyAndWordFlag = false
+            this.arrowEventNum = -1
+          }
+          document.getElementById('groups').appendChild(li)
+          num = num + 1
+        }
+      })
+      this.arrowEventNumMax = num
     },
 //////////////////////////// COMMON //////////////////////////
     closeLogDetail() {
@@ -1324,6 +1460,7 @@ export default {
         leftAxisRadio.setAttribute('type', "radio")
         leftAxisRadio.setAttribute('name', key)
         leftAxisRadio.setAttribute('value', "left")
+        leftAxisRadio.setAttribute('checked', "checked")
         var leftAxisSpan= document.createElement("span")
         leftAxisSpan.setAttribute('class', "checkmark")
 
@@ -1339,7 +1476,6 @@ export default {
         rightAxisRadio.setAttribute('type', "radio")
         rightAxisRadio.setAttribute('name', key)
         rightAxisRadio.setAttribute('value', "right")
-        rightAxisRadio.setAttribute('checked', "checked")
         var rightAxisSpan= document.createElement("span")
         rightAxisSpan.setAttribute('class', "checkmark")
 
@@ -1411,6 +1547,7 @@ export default {
     newHighlightItem(){
       let that = this
       var li = document.createElement("li");
+      li.setAttribute('class', "li-highlight")
       var inputValue = document.getElementById("highlight-input").value;
       var colorValue = document.getElementById("highlight-color").value;
       this.highlightKeyword[inputValue] = colorValue
@@ -1527,17 +1664,27 @@ export default {
     },
     modeSwitch(){
       if ((this.prevViewMode == 'standard') & (this.viewMode == 'overview')) {
+        document.getElementById("log-detail-standard-zoom-btn").style.display = "none"
         document.getElementById("log-detail-standard").style.width = "0%";
         document.getElementById("graph-detail-standard").style.width = "0%";
       }else if((this.prevViewMode == 'filter') & (this.viewMode == 'overview')) {
+        document.getElementById("log-detail-filter-zoom-btn").style.display = "none"
         document.getElementById("log-detail-filter").style.width = "0%";
         document.getElementById("graph-detail-filter").style.width = "0%";
+      }else if((this.prevViewMode == 'overview') & (this.viewMode == 'standard')) {
+        document.getElementById("log-detail-standard-zoom-btn").style.display = "block"
+      }else if((this.prevViewMode == 'overview') & (this.viewMode == 'filter')) {
+        document.getElementById("log-detail-filter-zoom-btn").style.display = "block"
       }else if((this.prevViewMode == 'standard') & (this.viewMode == 'filter')) {
+        document.getElementById("log-detail-standard-zoom-btn").style.display = "none"
+        document.getElementById("log-detail-filter-zoom-btn").style.display = "block"
         document.getElementById("log-detail-standard").style.width = "0%";
         document.getElementById("graph-detail-standard").style.width = "0%";
         this.createKeyWordsTreeGraph()
         this.createLegendConfigModal(this.filterSelectableLines, this.filterSelectedLines)
       }else if((this.prevViewMode == 'filter') & (this.viewMode == 'standard')) {
+        document.getElementById("log-detail-standard-zoom-btn").style.display = "block"
+        document.getElementById("log-detail-filter-zoom-btn").style.display = "none"
         document.getElementById("log-detail-filter").style.width = "0%";
         document.getElementById("graph-detail-filter").style.width = "0%";
         this.createKeyWordsTreeGraph()
