@@ -145,15 +145,16 @@ padding: 0px 0px 0px 0px;
     /* display: flex; */
     display: block;
     position: relative;
-    padding: 12px 8px 12px 10px;
+    padding: 12px 8px 12px 10px !important;
     list-style-type: none;
-    background: #eee;
+    background: #f9f9f9;
     font-size: 18px;
     transition: 0.2s;
 }
 
 .modal .li-legend label{
     color: #000;
+    background: #f9f9f9 !important;
 }
 
 .modal ul li .left{

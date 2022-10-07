@@ -35,7 +35,7 @@
     float: left;
     color: #f2f2f2;
     text-align: center;
-    padding: 7px 16px;
+    padding: 5px 16px !important;
     text-decoration: none;
     font-size: 15px;
     font-weight: bold;
@@ -48,12 +48,13 @@
 }
 
 .topnav input[type=text] {
-    position: absolute;
+    position: fixed;
+    z-index: 1;
     width: 10%;
     padding: 6px;
     margin-left: 2px;
     border: none;
-    font-size: 17px;
+    font-size: 13px;
     border: 1px solid #ccc;  
     -webkit-transition: width 0.4s ease-in-out;
     transition: width 0.4s ease-in-out;
@@ -77,15 +78,14 @@
 .topnav-drop-down li {
   border: 1px solid #ddd; /* Add a thin border to each list item */
   background-color: #000000; /* Add a grey background color */
-  color: #fff;
-  padding: 12px;
-  font-size: 12px;
+  color: #fff !important;
+  padding: 12px !important;
+  font-size: 12px !important;
   font-weight: bold;
-  margin-left: 222px;
+  margin-left: 100px;
 }
 
-.topnav-drop-down li:hover,
-.topnav-drop-down li:focus {
+.topnav-drop-down li:hover{
   background-color: #666;
   text-decoration: none;
   cursor: pointer;
@@ -96,9 +96,8 @@
     float: right;
     padding-left: 10px;
     margin-top: 5px;
-    margin-bottom: 5px;
     cursor: pointer;
-    font-size: 18px;
+    font-size: 18px !important;
     color: #fff;
 }
   
@@ -115,7 +114,7 @@
     float: left;
     height: 20px;
     width: 20px;
-    margin-right: 3px;
+    margin-right: 3px !important;
     background-color: #eee;
     border-radius: 50%;
 }
@@ -127,31 +126,14 @@
 
 /* When the radio button is checked, add a blue background */
 .container input:checked ~ .checkmark {
-    background-color: #FFA500;
+    background-color: #FFA500 !important;
 }
 
 /* Create the indicator (the dot/circle - hidden when not checked) */
 .container .checkmark:after {
     content: "";
     float: right;
-    margin-top: 6px;
-    margin-right: 6px;
     display: none;
-}
-
-/* Show the indicator (dot/circle) when checked */
-.container input:checked ~ .checkmark:after {
-    display: block;
-}
-
-/* Style the indicator (dot/circle) */
-.container .checkmark:after {
-    top: 9px;
-    left: 9px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: white;
 }
 
 /***************************************** full screen loading css */
