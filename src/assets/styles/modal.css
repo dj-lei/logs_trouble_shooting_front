@@ -120,23 +120,23 @@ font-size: 18px;
 transition: 0.2s;
 }
 
-.modal ul li .text{
+.modal .li-highlight .text{
 width: 50%;
 }
 
-.modal ul li .color{
+.modal .li-highlight .color{
 width: 10%;
 height: 50px;
 padding: 0px 0px 0px 0px;
 }
 
 /* Set all odd list items to a different color (zebra-stripes) */
-.modal ul li:nth-child(odd) {
+.modal .li-highlight:nth-child(odd) {
     background: #f9f9f9;
 }
 
 /* Darker background-color on hover */
-.modal ul li:hover {
+.modal .li-highlight:hover {
     background: #ddd;
 }
 
@@ -147,15 +147,22 @@ padding: 0px 0px 0px 0px;
     position: relative;
     padding: 12px 8px 12px 10px !important;
     list-style-type: none;
-    background: #f9f9f9;
+    background-color: #f9f9f9;
     font-size: 18px;
     transition: 0.2s;
+    border: 1px solid #ddd;
+}
+
+.modal .li-legend:hover {
+    background-color: #ddd;
 }
 
 .modal .li-legend label{
     color: #000;
-    background: #f9f9f9 !important;
+    background-color: Transparent !important;
 }
+
+
 
 .modal ul li .left{
     float: left;

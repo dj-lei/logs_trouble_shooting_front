@@ -75,6 +75,10 @@
   margin-top: 35px;
 }
 
+.topnav-drop-down li:nth-child(odd) {
+  background: #000000;
+}
+
 .topnav-drop-down li {
   border: 1px solid #ddd; /* Add a thin border to each list item */
   background-color: #000000; /* Add a grey background color */
