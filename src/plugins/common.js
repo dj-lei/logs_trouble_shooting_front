@@ -277,7 +277,7 @@ export default {
       }
     },
 
-    createTreeSvg(data, svg, filterData){
+    createTreeSvg(data, svg, filterData, isAllOpen){
       let that = this
       if (Object.keys(data).length == 0) {
         return
@@ -317,9 +317,10 @@ export default {
             flag = true
           }
         })
-
-        if (flag == false){
-          if (d.depth !== 0) d.children = null;
+        if (!isAllOpen) {
+          if (flag == false){
+            if (d.depth !== 0) d.children = null;
+          }
         }
       });
     

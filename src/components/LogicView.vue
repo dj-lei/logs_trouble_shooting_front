@@ -40,11 +40,13 @@
         ul(id="highlight-list" style="list-style: none;")
     div(id="keywords-modal" class="modal-keywords")
       div(class="modal-content-keywords")
+        template(v-if="viewMode === 'standard'")
+          input(id="keywords-search" type="text" placeholder="Filter.." v-on:keyup.enter="filterKeyWordsTreeGraph")
         svg(id="keywords" width="1600" height="800")
     div(id="legend-config-modal" class="modal")
-      div(id="legend-config" class="modal-content")
-        div(class="modal-header")
-          h2 Legend Config
+      div(class="modal-content")
+        input(id="legend-search" type="text" class="filter" placeholder="Filter.." v-on:keyup.enter="filterLegendConfig")
+        div(id="legend-config")
         //- ul
         //-   li(class="li-legend")
         //-     form
@@ -86,6 +88,8 @@
         table(id='content-filter')
     div(id="graph-detail-filter" class="overlay-graph-filter" style="left: 100%;")
       div(id='graphs-filter' class="overlay-content")
+
+    div(id="snackbar" class="snackbar") Log Jump Success.
 
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
@@ -342,6 +346,7 @@ export default {
     resetKeywordsTreeCoordinates(){
       var zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomedKeywordsTree)
       d3.select("#keywords").call(zoom).on("dblclick.zoom", null)
+      d3.select("#keywords").transition().call(zoom.transform, d3.zoomIdentity)
     },
     zoomedStoryLine(event) {
       const {transform} = event
@@ -826,6 +831,7 @@ export default {
           that.$common.removeAllChildDom('content-standard')
           that.graphLogData = that.originLogs[that.process]
           that.openLogDetail(that.numLine, false)
+          that.openSnackbar()
         }
       });
       chart.on('legendselectchanged', function(params){
@@ -1105,6 +1111,7 @@ export default {
         if(params['componentType'] != 'markLine'){
           that.$common.removeAllChildDom('content-filter')
           that.openFilterLogDetail(params.data.value[0], false)
+          that.openSnackbar()
         }
       });
       chart.on('legendselectchanged', function(params){
@@ -1410,7 +1417,7 @@ export default {
       }
       document.getElementById("graph-detail").style.width = "0%";
     },
-    createKeyWordsTreeGraph(){
+    createKeyWordsTreeGraph(isAllOpen=false){
       d3.select('#canvas1').remove()
       this.svgKeywordsTree = d3.select('#keywords').append("g")
                 .attr("id", "canvas1")
@@ -1419,9 +1426,30 @@ export default {
                 .attr("transform", `translate(0,400)`)
       this.resetKeywordsTreeCoordinates()
       if(this.viewMode == 'standard'){
-        this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs)
+        this.$common.createTreeSvg(this.keyWordsTree, this.svgKeywordsTree, this.filterGraphs, isAllOpen)
       }else{
-        this.$common.createTreeSvg(this.filterKeyWordsTree, this.svgKeywordsTree, this.filterfilterGraphs)
+        this.$common.createTreeSvg(this.filterKeyWordsTree, this.svgKeywordsTree, this.filterfilterGraphs, isAllOpen)
+      }
+    },
+    filterKeyWordsTreeGraph(){
+      var word = document.getElementById('keywords-search').value
+      if(word != ''){
+        var res = {}
+        Object.keys(this.keyWords).forEach((process) => {
+          Object.keys(this.keyWords[process]).forEach((keyword) => {
+            if(keyword.toLowerCase().includes(word.toLowerCase())){
+              if(!res.hasOwnProperty(process)){
+                res[process] = {}
+              }
+              res[process][keyword] = this.keyWords[process][keyword]
+            }
+          })
+        })
+        this.keyWordsTree = this.$common.generateKeyWordsTree(res)
+        this.createKeyWordsTreeGraph(true)
+      }else{
+        this.keyWordsTree = this.$common.generateKeyWordsTree(this.keyWords)
+        this.createKeyWordsTreeGraph()
       }
     },
     createLegendConfigModal(lines, select){
@@ -1433,12 +1461,16 @@ export default {
         li.setAttribute('class', 'li-legend')
 
         var form = document.createElement("form")
+        form.setAttribute('id', key)
         form.setAttribute('name', key)
 
         // checkbox
         var inputCheckBox = document.createElement("input")
         inputCheckBox.setAttribute('type', "checkbox")
-        // inputCheckBox.setAttribute('class', "left")
+        if (select.hasOwnProperty(key)) {
+          inputCheckBox.setAttribute('checked', "checked")
+        }
+
         inputCheckBox.onclick = function() {
           if (select.hasOwnProperty(key)) {
             delete select[key]
@@ -1479,6 +1511,13 @@ export default {
         var rightAxisSpan= document.createElement("span")
         rightAxisSpan.setAttribute('class', "checkmark")
 
+        if (select.hasOwnProperty(key)) {
+          if(select[key] == 'right'){
+            leftAxisRadio.removeAttribute("checked")
+            rightAxisRadio.setAttribute('checked', "checked")
+          }
+        }
+
         rightAxisLabel.appendChild(rightAxisRadio)
         rightAxisLabel.appendChild(rightAxisSpan)
 
@@ -1492,14 +1531,38 @@ export default {
           .appendChild(ul)
       })
     },
+    filterLegendConfig(){
+      var word = document.getElementById("legend-search").value
+      var filteredSelectableLine = []
+      this.packageSelectedLinesYAxis()
+      if(this.viewMode == 'standard'){
+        this.selectableLines.forEach((key) => {
+          if (key.toLowerCase().includes(word.toLowerCase())) {
+            filteredSelectableLine.push(key)
+          }
+        })
+        this.createLegendConfigModal(filteredSelectableLine, this.selectedLines)
+      }else if(this.viewMode == 'filter'){
+        this.filterSelectableLines.forEach((key) => {
+          if (key.toLowerCase().includes(word.toLowerCase())) {
+            filteredSelectableLine.push(key)
+          }
+        })
+        this.createLegendConfigModal(filteredSelectableLine, this.filterSelectedLines)
+      }
+    },
     packageSelectedLinesYAxis(){
       if (this.viewMode == 'standard') {
         Object.keys(this.selectedLines).forEach((key) => {
-          this.selectedLines[key] = document[key][key].value
+          if (document.getElementById(key) != null) {
+            this.selectedLines[key] = document[key][key].value
+          }
         })
       }else{
         Object.keys(this.filterSelectedLines).forEach((key) => {
-          this.filterSelectedLines[key] = document[key][key].value
+          if (document.getElementById(key) != null) {
+            this.filterSelectedLines[key] = document[key][key].value
+          }
         })
       }
 
@@ -1690,6 +1753,11 @@ export default {
         this.createKeyWordsTreeGraph()
         this.createLegendConfigModal(this.selectableLines, this.selectedLines)
       }
+    },
+    openSnackbar(){
+      var x = document.getElementById("snackbar");
+      x.className = "show";
+      setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
     },
     logs () {
       console.log(d3.select("#canvas0").node())

@@ -9,7 +9,7 @@
     height: 100%; /* Full height */
   }
   
-  .modal-content-keywords {
+.modal-content-keywords {
     overflow: auto;
     position: relative;
     background-color: #555;
@@ -20,8 +20,14 @@
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
     animation-name: animatetop;
     animation-duration: 0.4s
-  }
+}
 
+.modal-content-keywords input[type=text]{
+    font-size: 13px;
+    padding: 6px;
+    border: 1px solid #ccc;  
+    width: 100%; /* Full width */
+}
   /***************************************** highlight modal css */
 .modal {
     display: none; /* Hidden by default */
@@ -48,6 +54,13 @@
     box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
     animation-name: animatetop;
     animation-duration: 0.4s
+}
+
+.modal-content .filter{
+    font-size: 13px;
+    padding: 12px;
+    border: 1px solid #ccc;  
+    width: 100%; /* Full width */
 }
 
 /* Modal Header */
