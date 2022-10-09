@@ -3,7 +3,6 @@
     div(id="topnav" class="topnav")
       template(v-if="viewMode === 'standard'")
         a(class="btn" @click="openHighlightModal") Highlight
-        //- a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
         a(class="btn" @click="$common.exportConfig(filterGraphs, highlightKeyword)") ExportConfig
         a(class="btn" @click="$common.loadConfig") LoadConfig
         //- a(class="index") {{process}}
@@ -11,17 +10,13 @@
         a(class="btn" @click="openHighlightModal") Highlight
         //- a(class="index") {{index}}
       template(v-else-if="viewMode === 'filter'")
-        //- a(class="btn" @click="openHighlightModal") Highlight
-        //- a(class="btn" @click="openKeyWordsTreeModal") KeyWordsTree
-        //- a(class="btn" @click="$common.exportConfig(viewMode, filterGraphs)") ExportConfig
-        //- a(class="btn" @click="$common.loadConfig") LoadConfig
         input(id="cmd" type="text" placeholder="Search.." v-on:keydown="keyDownEvent")
         //- a(class="index") {{process}}
       form(name="viewMode")
         label(class="container") Overview
           input(type="radio" name="mode" value="overview")
           span(class="checkmark")
-        label(class="container") Filter
+        label(class="container") Search
           input(type="radio" name="mode" value="filter")
           span(class="checkmark")
         label(class="container") Standard
@@ -184,7 +179,7 @@ export default {
   mounted () {
     let that = this
     this.$common.startLoading()
-
+    this.stime = new Date()
     // resize screen
     this.$common.setBrowserTitle("Logic View")
     this.$common.setChartDartTheme(echarts)
@@ -225,8 +220,8 @@ export default {
       }
       document.getElementById("keywords-modal").style.display = "none";
     }else if(event.target == document.getElementById("legend-config-modal")){
-      document.getElementById("legend-config-modal").style.display = "none";
       that.packageSelectedLinesYAxis()
+      document.getElementById("legend-config-modal").style.display = "none";
       if(that.viewMode == 'standard'){
         that.openLogDetail(that.numLine, true)
       }else{
@@ -310,14 +305,12 @@ export default {
         },
         })
         .then(response => {
-          // console.log(response.data.content)
-          this.originLogs = response.data.content.origin_logs
-          this.keyWords = response.data.content.kv
-          this.invertedIndexTable = response.data.content.inverted_index_table
+          this.originLogs = response.data.origin_logs
+          this.keyWords = response.data.kv
+          this.invertedIndexTable = response.data.inverted_index_table
 
           this.keyWordsTree = this.$common.generateKeyWordsTree(this.keyWords)
           this.createKeyWordsTreeGraph()
-
           // for (var i = 0; i < this.data.length; i++) {
           //   if(this.data[i]['process'] == this.process){
           //     this.graphLogData = this.data[i]
@@ -635,6 +628,8 @@ export default {
       var yAxisIndex = 0
       var legend = []
       var unselect = {}
+      var leftYAxis = []
+      var rightYAxis = []
 
       if (Object.keys(this.selectedLines).length == 0) {
         option['yAxis'] = [{'type':'value'}]
@@ -653,8 +648,15 @@ export default {
         if (line.includes('(d)')){
           var categories = this.$common.arrayDuplicates(value)
         }
-
         // config yaxis
+        var offsetNum = 0
+        if (this.selectedLines[line] == 'left') {
+          leftYAxis.push('left')
+          offsetNum = leftYAxis.length - 1
+        }else{
+          rightYAxis.push('right')
+          offsetNum = rightYAxis.length - 1
+        }
         option['yAxis'].push({
           axisLabel: {
             textStyle:{
@@ -665,10 +667,10 @@ export default {
           name: line,
           nameTextStyle: {
             fontSize:'7',
-            padding:[0, 0, -7 * parseInt(yAxisIndex / 2), 0],
+            padding:[0, 0, -7 * offsetNum, 0],
           },
           position: this.selectedLines[line], // left or right
-          offset: 30 * parseInt(yAxisIndex / 2),
+          offset: 30 * offsetNum,
           data: line.includes('(d)') ? categories : null
         })
 
@@ -845,13 +847,13 @@ export default {
 ////////////////////////Filter Mode///////////////////////////
     initFilterMode(){
       Object.keys(this.originLogs).forEach((process) => {
-        this.filterOriginLogs = Object.assign({}, this.filterOriginLogs, this.originLogs[process])
+        Object.keys(this.originLogs[process]).forEach((globalIndex) => {
+          this.filterOriginLogs[globalIndex] = this.originLogs[process][globalIndex]
+        })
       })
-
       Object.keys(this.filterOriginLogs).forEach((globalIndex) => {
         this.filterTimestamp.push(this.filterOriginLogs[globalIndex]['timestamp'])
       })
-
       Object.keys(this.keyWords).forEach((process) => {
         Object.keys(this.keyWords[process]).forEach((keyword) => {
           var keywordData = this.keyWords[process][keyword]
@@ -957,6 +959,8 @@ export default {
       var yAxisIndex = 0
       var legend = []
       var unselect = {}
+      var leftYAxis = []
+      var rightYAxis = []
 
       if (Object.keys(this.filterSelectedLines).length == 0) {
         option['yAxis'] = [{'type':'value'}]
@@ -983,6 +987,14 @@ export default {
         }
 
         // config yaxis
+        var offsetNum = 0
+        if (this.selectedLines[line] == 'left') {
+          leftYAxis.push('left')
+          offsetNum = leftYAxis.length - 1
+        }else{
+          rightYAxis.push('right')
+          offsetNum = rightYAxis.length - 1
+        }
         option['yAxis'].push({
           axisLabel: {
             textStyle:{
@@ -993,10 +1005,10 @@ export default {
           name: line,
           nameTextStyle: {
             fontSize:'7',
-            padding:[0, 0, -7 * parseInt(yAxisIndex / 2), 0],
+            padding:[0, 0, -7 * offsetNum, 0],
           },
           position: this.filterSelectedLines[line], // left or right
-          offset: 30 * parseInt(yAxisIndex / 2),
+          offset: 30 * offsetNum,
           data: line.includes('(d)') ? categories : null
         })
 
@@ -1320,6 +1332,7 @@ export default {
       this.openFilterLogDetail(0, true)
     },
     keyDownEvent(event){
+      let that = this
       if(event.ctrlKey == true){
         return
       }
@@ -1354,7 +1367,13 @@ export default {
           this.inputWord = ''
           this.keyAndWordFlag = false
           this.arrowEventNum = -1
-          this.filter()
+          this.$common.startLoading()
+          setTimeout(function(){ 
+            that.filter() 
+            that.$common.stopLoading()
+          }, 50);
+          
+          // this.$common.stopLoading()
         }
       }else if(event.key == 'Backspace'){
         if(this.inputWord.length > 0){
@@ -1565,7 +1584,6 @@ export default {
           }
         })
       }
-
     },
     openKeyWordsTreeModal(){
       var modal = document.getElementById("keywords-modal")

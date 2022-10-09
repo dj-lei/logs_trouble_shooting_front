@@ -21,14 +21,15 @@ export default {
        return theRequest
     },
 
-    getTime (time_stamp) {
+    getTime () {
       let yy = new Date().getFullYear();
-      let mm = new Date().getMonth()+1;
+      let mm = new Date().getMonth();
       let dd = new Date().getDate();
       let hh = new Date().getHours()
       let mf = new Date().getMinutes()<10 ? '0'+new Date().getMinutes() : new Date().getMinutes();
       let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
-      return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
+      let mil = new Date().getMilliseconds()
+      return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss+'.'+mil
     },
 
     getTimeHour (time_stamp) {
@@ -38,7 +39,8 @@ export default {
       let hh = new Date(time_stamp).getHours()
       let mf = new Date(time_stamp).getMinutes()<10 ? '0'+new Date(time_stamp).getMinutes() : new Date(time_stamp).getMinutes();
       let ss = new Date(time_stamp).getSeconds()<10 ? '0'+new Date(time_stamp).getSeconds() : new Date(time_stamp).getSeconds();
-      return hh+':'+mf+':'+ss
+      let mil = new Date().getMilliseconds()
+      return hh+':'+mf+':'+ss+'.'+mil
     },
 
     colorRGBtoHex(color) {
