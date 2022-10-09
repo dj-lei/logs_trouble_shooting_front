@@ -289,6 +289,7 @@ export default {
                 that.createStoryLineGraph()
                 that.createHighlightPoint()
               }
+              that.createHighlightPoint()
             }
             // that.$common.stopLoading()
         });
@@ -547,7 +548,6 @@ export default {
     },
     openLogDetail(line, isRefreshGraph) {
       var content = document.getElementById('content-standard')
-
       if ((!content.hasChildNodes()) & (Object.keys(this.graphLogData).length > 0)) {
         Object.keys(this.graphLogData).forEach((num, logIndex) => {
           var tr = document.createElement("tr")
@@ -1304,7 +1304,11 @@ export default {
             }
           })
         })
-        this.packageFilteredData(this.filterExp['@exp0_0'].map(v => {return parseInt(v)}).sort())
+        var tmp = this.filterExp['@exp0_0'].map(v => {return parseInt(v)})
+                  .sort(function(a, b) {
+                    return a - b
+                  })
+        this.packageFilteredData(tmp)
       }
       catch(err){
         console.log(err)
