@@ -10,7 +10,7 @@
         a(class="btn" @click="openHighlightModal") Highlight
         //- a(class="index") {{index}}
       template(v-else-if="viewMode === 'filter'")
-        input(id="cmd" type="text" placeholder="Search.." v-on:keydown="keyDownEvent")
+        input(id="cmd" type="text" placeholder="Search.." v-on:keydown="keyDownEvent" @focus="filterInputFocusEvent" @blur="filterInputBlurEvent")
         //- a(class="index") {{process}}
       form(name="viewMode")
         label(class="container") Overview
@@ -1382,7 +1382,11 @@ export default {
       }else if(event.key == 'Backspace'){
         if(this.inputWord.length > 0){
           this.inputWord = this.inputWord.slice(0, this.inputWord.length - 1)
-          this.filterKeyWordsEvent()
+          if (this.inputWord.length > 0) {
+            this.filterKeyWordsEvent()
+          }else{
+            this.$common.removeAllChildDom('groups')
+          }
         }
       }else if(event.code == 'Space'){
         this.$common.removeAllChildDom('groups')
@@ -1428,6 +1432,14 @@ export default {
         }
       })
       this.arrowEventNumMax = num
+    },
+    filterInputFocusEvent(){
+      if(this.inputWord.length > 0){
+        this.filterKeyWordsEvent()
+      }
+    },
+    filterInputBlurEvent(){
+      this.$common.removeAllChildDom('groups')
     },
 //////////////////////////// COMMON //////////////////////////
     closeLogDetail() {
