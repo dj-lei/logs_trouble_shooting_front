@@ -171,11 +171,6 @@ export default {
       graphWidth: 1000,
     }
   },
-  watch:{
-    isGraphFullScreen(n, o) {
-      // console.log(n)
-    }
-  },
   mounted () {
     let that = this
     this.$common.startLoading()
@@ -753,7 +748,7 @@ export default {
       option['tooltip']['formatter'] = function(params){
         var ret = ''
         params.forEach((param) => {
-          if((param['seriesName'].split('.')[0] != 'highlight')&(param.axisType != "yAxis.category")){
+          if(param['seriesName'].split('.')[0] != 'highlight'){
             ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;" + param.seriesName + ":" + param.data.origin + '<br/>'
           }
         })
@@ -859,7 +854,12 @@ export default {
           var keywordData = this.keyWords[process][keyword]
           keywordData.slice(0, keywordData.length - 3).forEach((item, index) => {
             var name = keyword+'.'+String(index)
-            var p = item.map((v, i) =>{return {'value': parseFloat(v), 'globalIndex':keywordData[keywordData.length - 1][i]} })
+            if (keyword.includes('(c)')){
+              var p = item.map((v, i) =>{return {'value': parseFloat(v), 'globalIndex':keywordData[keywordData.length - 1][i]} })
+            }else{
+              var p = item.map((v, i) =>{return {'value': v, 'globalIndex':keywordData[keywordData.length - 1][i]} })
+            }
+            
             if (!this.filterKeyWords.hasOwnProperty(name)) {
               this.filterKeyWords[name] = p
             }else{
@@ -869,7 +869,6 @@ export default {
         })
       })
       this.filterKeyWords['timestamp'] = []
-
       this.filterInvertedIndexTable = this.invertedIndexTable
       Object.keys(this.originLogs).forEach((process) => {
         if (!this.filterInvertedIndexTable.hasOwnProperty(process)) {
@@ -931,8 +930,8 @@ export default {
         var keyword = this.filterfilterGraphs[key][1]
         var bit = ''
         if (keyword.includes('(r)')) {
-          bit = keyword.split('(r)')[1]
-          keyword = keyword.split('(r)')[0]+'(r)'
+          bit = 'bit'+keyword.split('bit')[1]
+          keyword = keyword.split('bit')[0]
         }
         if (this.filteredKeyWords.hasOwnProperty(keyword)) {
           if (keyword.includes('(r)')) {
@@ -968,7 +967,7 @@ export default {
 
       Object.keys(this.filterSelectedLines).forEach((line) => {
         var d = []
-        var keyword = line
+        var keyword = line.includes('r') ? line.split('.')[0]+'.'+line.split('.')[1] : line 
         var value = []
         this.filteredKeyWords[keyword].forEach((d) => {
           this.filterKeyWords[keyword].forEach((i) => {
@@ -985,7 +984,6 @@ export default {
         if (line.includes('(d)')){
           var categories = this.$common.arrayDuplicates(value)
         }
-
         // config yaxis
         var offsetNum = 0
         if (this.selectedLines[line] == 'left') {
@@ -1047,9 +1045,7 @@ export default {
       option['tooltip']['formatter'] = function(params){
         var ret = ''
         params.forEach((param) => {
-          if(param.axisType != "yAxis.category"){
-            ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;" + param.seriesName + ":" + param.data.origin + '<br/>'
-          }
+          ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;" + param.seriesName + ":" + param.data.origin + '<br/>'
         })
         return ret;
       }
@@ -1226,17 +1222,16 @@ export default {
       }else{
         var words = express.split(' ')
         words.forEach((word, index) => {
-          if(index < words.length - 1){
+          if (index == 0) { // first word default |
+            this.cmdWords.push(word)
+            params.push({'operate':'|', 'name':word})
+          }else if(index < words.length - 1){
             if (word == '&') {
               this.cmdWords.push(words[index + 1])
               params.push({'operate':'&', 'name':words[index + 1]})
             }else if(word == '|'){
               this.cmdWords.push(words[index + 1])
               params.push({'operate':'|', 'name':words[index + 1]})
-            }
-            if (index == 0) { // first word default |
-              this.cmdWords.push(word)
-              params.push({'operate':'|', 'name':word})
             }
           }
         })
@@ -1249,6 +1244,7 @@ export default {
         this.filterGraphLogData = {}
         this.filteredKeyWords = []
         this.filterfilterGraphs = []
+        this.filterSelectedLines = {}
         var cmd = document.getElementById("cmd").value
         // var cmd = 'txlProcBranchH & (pmb | txAtt) & ((@Pma(c).0 > 11) & ((@timestamp > "2022-09-27 13:32:35.606385800") & (@timestamp < "2022-09-27 13:35:30.675762960")))'
         // { '0':

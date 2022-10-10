@@ -217,7 +217,10 @@ export default {
         tooltip: {
           trigger: 'axis',
           show: true,
-          layout: 'vertical',
+          axisPointer:{
+            axis: 'x'
+          },
+          // layout: 'vertical',
           formatter: (params) => {
             var ret = ''
             params.forEach((param) => {
@@ -261,7 +264,7 @@ export default {
             textStyle:{
               fontSize: "10"
             },
-          },
+          }
         },
         dataZoom: [
           {
