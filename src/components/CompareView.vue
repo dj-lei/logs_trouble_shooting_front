@@ -1,14 +1,8 @@
 <template lang="pug">
   div(class="compare-view-full-height")
-    div(id="topnav" class="compare-view-topnav")
-      form(class="form-inline")
-        a(class="go" @click="go") GO
-        a(class="func" @click="openKeyWordsTreeModal") KeyWordsTree
-        a(class="func" @click="openHighlightModal") Highlight
-        a(class="func" @click="openPaintCategoryModal") PaintCategory
-        a(class="func" @click="exportConfig") ExportConfig
-        a(class="func" @click="loadConfig") LoadConfig
-        input(id="fileInput" type="file" style="display:none")
+    div(id="topnav" class="topnav")
+      a(class="btn" @click="openHighlightModal") Highlight
+
     div(id="highlight-modal" class="modal")
       div(class="modal-content")
         div(class="modal-header")
@@ -17,31 +11,21 @@
           input(class="modal-input-color" type="color" id="highlight-color")
           span(class="addBtn" @click="newHighlightItem") Add
         ul(id="highlight-list" style="list-style: none;")
-    div(id="paint-category-modal" class="modal")
-      div(class="modal-content")
-        div(class="modal-header")
-          h2 Paint Category
-          form(name="paintCategory")
-            label(class="container") sequential
-              input(type="radio" checked="checked" name="radio" value="sequential")
-              span(class="checkmark")
-            label(class="container") statistics
-              input(type="radio" name="radio" value="statistics")
-              span(class="checkmark")
-    div(id="graph-config-modal" class="modal")
-      div(class="modal-content")
-        div(class="modal-header")
-          h2 Bisection Or Manual Config
-          input(class="modal-input-text" type="text" id="interval-input" placeholder="Interval1,Interval2,Interval3...")
-    
-    div(id="full-graph-modal" class="full-screen-modal")
-      div(class="full-screen-modal-content")
-        div(id="full-graph" style=`width:1800px;height:800px;`)
 
-    div(id="keywords-modal" class="keywords-modal")
-      div(class="keywords-modal-content")
-        svg(id="viz" width="1600" height="800")
-    div(id="graphs" class="graphs")
+    //- div(id="keywords-modal" class="keywords-modal")
+    //-   div(class="keywords-modal-content")
+    //-     svg(id="keywords-svg" width="1600" height="800")
+
+    template(v-if="viewMode === 'story'")
+      div(class="story-compare")
+        div(class="story1")
+          svg(id="story1-svg" :height="height" :width="width")
+        div(class="story2")
+          svg(id="story2-svg" :height="height" :width="width")
+    template(v-else-if="viewMode === 'key'")
+      div(class="key-compare")
+        svg(id="key-svg" :height="height" :width="width")
+
     div(class="loading hidden")
       div(class='uil-ring-css' style='transform:scale(0.79);')
         div
@@ -56,241 +40,326 @@ export default {
     return {
       margin: {
         top: 30,
-        right: 80,
+        right: 0,
         bottom: 30,
-        left: 30
+        left: 0
       },
-      data: {},
-      keyWordsTree: {},
-      originIndex: {},
+      viewMode: 'key',
+      originLogs: {},
+      keyWords: {},
       invertedIndexTable: {},
-      svg:'',
-      zoom:'',
-      index:[''],
-      filterData: {},
       highlightKeyword: {'abn':'#FF9900', 'error,fault':'#FF0000'},
-      paintCategory: 'sequential',
-      bisection: 10,
-      graphHeight: 200,
-      graphWidth: 550,
+
+      data: [],
+      process_num:{},
+
+      width: 1000,
+      height: 1200,
     } 
   },
 
   mounted () {
-    this.$common.startLoading()
-
-    let that = this
-    this.$common.setBrowserTitle("Compare View")
-    this.$common.setChartDartTheme(echarts)
-    this.getKeyValues(new URLSearchParams(`?${window.location.hash.split(/\?/)[1]}`).get('index'))
-  
-    Object.keys(this.highlightKeyword).forEach((key) => {
-      var li = document.createElement("li");
-      var t = document.createElement("input");
-      t.setAttribute('class', "text")
-      t.setAttribute('value', key)
-      var c = document.createElement("input")
-      c.setAttribute('type', "color")
-      c.setAttribute('class', "color")
-      c.setAttribute('value', this.highlightKeyword[key])
-      li.appendChild(t)
-      li.appendChild(c)
-      
-      var span = document.createElement("SPAN");
-      var txt = document.createTextNode("\u00D7");
-      span.className = "close-list";
-      span.appendChild(txt);
-      li.appendChild(span);
-      document.getElementById("highlight-list").appendChild(li);
-
-      var close = document.getElementsByClassName("close-list");
-      for (var i = 0; i < close.length; i++) {
-        close[i].onclick = function() {
-          var key = this.parentElement.querySelector('.text').value
-          delete that.highlightKeyword[key]
-          this.parentElement.style.display = "none";
-        }
-      }
-    })
-
-    window.onclick = function(event) {
-      if (event.target == document.getElementById("highlight-modal")) {
-        document.getElementById("highlight-modal").style.display = "none";
-      }else if (event.target == document.getElementById("keywords-modal")) {
-        document.getElementById("keywords-modal").style.display = "none";
-      }else if (event.target == document.getElementById("graph-config-modal")) {
-        document.getElementById("graph-config-modal").style.display = "none";
-      }else if (event.target == document.getElementById("paint-category-modal")) {
-        document.getElementById("paint-category-modal").style.display = "none";
-      }else if (event.target == document.getElementById("full-graph-modal")) {
-        document.getElementById("full-graph-modal").style.display = "none";
-      }
+    if(this.viewMode == 'story'){
+      this.width = document.body.offsetWidth / 2
+    }else{
+      this.width = document.body.offsetWidth
     }
-
-    document.getElementById('fileInput').onchange = function (event) {
-      var reader = new FileReader();
-      reader.onload = onReaderLoad;
-      reader.readAsText(event.target.files[0]);
-    }
-    function onReaderLoad(event){
-      var obj = JSON.parse(event.target.result);
-      that.filterData = obj.filterData
-      that.highlightKeyword = obj.highlightKeyword
-      d3.select(`#canvas`).remove()
-      that.createKeyWordsTreeGraph()
-    }
-
-    var rad = document.paintCategory.radio;
-    var prev = null;
-    for (var i = 0; i < rad.length; i++) {
-        rad[i].addEventListener('change', function() {
-            if (this !== prev) {
-                prev = this;
-            }
-            that.paintCategory = this.value
-        });
-    }
+    this.height = document.body.offsetHeight
+    this.getIndex('GLT_SUKAMULYA_CBN_CM_BXP_2051_telog.log_BXP_2051_radio6626_2022_10_10')
   },
   methods: {
-    async getKeyValues (index) {
-      await this.$http.get(this.$urls.logs_key_values, {
+    async getIndex (index) {
+      await this.$http.get(this.$urls.logs_trouble_shooting, {
         params: {
           index: index
         },
         })
         .then(response => {
-          this.data = response.data.story_line
-          this.originIndex = response.data.origin_index
+          this.originLogs = response.data.origin_logs
+          this.keyWords = response.data.kv
           this.invertedIndexTable = response.data.inverted_index_table
-          this.keyWordsTree = this.$common.generateKeyWordsTree(this.data)
-          this.createKeyWordsTreeGraph()
-          this.createGraph()
-          this.$common.stopLoading()
+
+          if(this.viewMode == 'story'){
+            this.resetStory1LineCoordinates()
+            this.resetStory2LineCoordinates()
+            this.convertOriginLogsToStoryLine()
+            this.createStoryCompareGraph()
+          }else{
+            this.resetKeyCompareCoordinates()
+            this.createKeyCompareGraph()
+          }
         })
     },
-    resetCoordinates(){
-      this.zoom = d3.zoom().scaleExtent([1, 5]).on("zoom", this.zoomed)
-      d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    resetStory1LineCoordinates(){
+      var zoom = d3.zoom().scaleExtent([0.5, 3]).on("zoom", this.zoomedStory1Line)
+      d3.select("#story1-svg").call(zoom).on("dblclick.zoom", null)
     },
-    zoomed(event) {
+
+    resetStory2LineCoordinates(){
+      var zoom = d3.zoom().scaleExtent([0.5, 3]).on("zoom", this.zoomedStory2Line)
+      d3.select("#story2-svg").call(zoom).on("dblclick.zoom", null)
+    },
+
+    resetKeyCompareCoordinates(){
+      var zoom = d3.zoom().scaleExtent([0.5, 3]).on("zoom", this.zoomedKeyCompare)
+      d3.select("#key-svg").call(zoom).on("dblclick.zoom", null)
+    },
+
+    zoomedStory1Line(event) {
       const {transform} = event
-      d3.select("#canvas").attr("transform", transform)
+      d3.select("#story1").attr("transform", transform)
     },
-    createGraph () {
-      let that = this
-      var graphs = {}
 
-      var selected = {}
-      Object.keys(this.filterData).forEach((item) => {
-        if (!selected.hasOwnProperty(this.filterData[item][0])){
-          selected[this.filterData[item][0]] = []
-        }
+    zoomedStory2Line(event) {
+      const {transform} = event
+      d3.select("#story2").attr("transform", transform)
+    },
 
-        if (this.filterData[item][1].includes("(d)")){
-          selected[this.filterData[item][0]].push([this.filterData[item][1], "discrete"])
-        }else if(this.filterData[item][1].includes("(c)")){
-          selected[this.filterData[item][0]].push([this.filterData[item][1], "continuous"])
-        }else if(this.filterData[item][1].includes("(r)")){
-          selected[this.filterData[item][0]].push([this.filterData[item][1].split("(r)")[0]+'(r)', "register", parseInt(this.filterData[item][1].split("(r)")[1].replace("bit",""))])
-        }
+    zoomedKeyCompare(event) {
+      const {transform} = event
+      d3.select("#key-compare").attr("transform", transform)
+    },
+
+    convertOriginLogsToStoryLine(){
+      var res = {}
+      Object.keys(this.originLogs).forEach((process) => {
+        var globalIndex = Object.keys(this.originLogs[process])
+        var startCount = globalIndex[0]
+        var endCount = globalIndex[globalIndex.length - 1]
+        res[startCount] = {'process':process, 'startCount':startCount, 'endCount':endCount}
       })
-      Object.keys(this.data).forEach((index) => {
-        Object.keys(this.data[index]).forEach((dev) => {
-          Object.keys(selected).forEach((process) => {
-            selected[process].forEach((item) => {
-              var kv = item[0]
-              if(this.data[index][dev].hasOwnProperty(process)){
-                if(this.data[index][dev][process].hasOwnProperty(kv)){
-                  if (!graphs.hasOwnProperty(process)){
-                    graphs[process] = {}
-                  }
-                  var markLine = this.$common.invertedIndexTableQuery(this.invertedIndexTable[index][dev], this.originIndex[index][dev][process], this.data[index][dev][process][kv][this.data[index][dev][process][kv].length - 1].map(item => {return parseInt(item)}), this.highlightKeyword)
-                  
-                  var kvData = this.data[index][dev][process][kv].slice(0, this.data[index][dev][process][kv].length - 2)
-                  if(item[1] == "register"){
-                    kv = kv + "_bit" + String(item[2])
-                  }
+      Object.keys(res).forEach((startCount, index) => {
+        this.data.push(res[startCount])
+        this.process_num[res[startCount]['process']] = index
+      })
+    },
 
-                  if (!graphs[process].hasOwnProperty(kv)){
-                    graphs[process][kv] = [[index, dev, kvData, markLine, item]]
-                  }else{
-                    graphs[process][kv].push([index, dev, kvData, markLine, item])
-                  }
-                }
+    createStoryCompareGraph(){
+      this.createStoryLineGraph('#story1-svg', 'story1')
+      this.createStoryLineGraph('#story2-svg', 'story2')
+    },
+
+    createStoryLineGraph (svgId, gId) {
+      let that = this
+      this.yAxis = d3.scaleBand()
+              .domain(d3.range(this.data.length))
+              .range([0, this.data.length * 15 - this.margin.bottom - this.margin.top])
+              .padding(0.3)
+
+      this.xAxis = d3.scaleLinear()
+            .domain([d3.min(this.data, d => parseInt(d.startCount)), d3.max(this.data, d => parseInt(d.endCount))])
+            .range([0, this.width - this.margin.left - this.margin.right])
+
+      function getRect(d){
+        const el = d3.select(this);
+        const sx = that.xAxis(parseInt(d.startCount));
+        const ex = that.xAxis(parseInt(d.endCount));
+        const w = that.xAxis(parseInt(d.endCount) - parseInt(d.startCount) < 20 ? 20 : parseInt(d.endCount) - parseInt(d.startCount));
+        // const isLabelRight =(sx > width/2 ? sx+w < width : sx-w>0);
+        // el.style("cursor", "pointer")
+        el
+          .append("rect")
+          .attr("x", sx)
+          .attr("height", that.yAxis.bandwidth())
+          .attr("width", w)
+          .attr("fill", d.color);
+        el
+          .append("text")
+          .text(d.process)
+          .attr("text-anchor", "end")
+          .attr("x", sx-2)
+          .attr("y", 2)
+          .attr("fill", "#FFFFFF")
+          .style("font-weight", "bold")
+          .style("dominant-baseline", "hanging");
+      }
+      
+      let filteredData = this.data;
+      filteredData.forEach(d=> d.color = "#333")
+      this.svg = d3.select(svgId).append("g")
+                    .attr("id", gId)
+                    .style("font", "8px sans-serif")
+
+      const g = this.svg.append("g").attr("transform", (d,i)=>`translate(${this.margin.left} ${this.margin.top})`)
+      const groups = g
+        .selectAll("g")
+        .data(filteredData)
+        .enter()
+        .append("g")
+        .attr("class", "civ")
+
+      this.createBookmarkDrag()
+      // Bookmark line
+      const line = this.svg.append("line").attr("transform", `translate(${this.width - 100} 0)`)
+                          .attr("y1", this.margin.top-10)
+                          .attr("y2", this.data.length * 15 -this.margin.bottom)
+                          .attr("stroke", "#FF3300FF")
+                          .attr("stroke-width", 5)
+                          // .style("pointer-events","none")
+                          .style("cursor", "pointer")
+                          .call(this.drag)
+
+      groups.attr("transform", (d,i)=>`translate(0 ${this.yAxis(i)})`)
+      groups
+        .each(getRect)
+        .on("mouseover", function(event, d) {
+          d3.select(this).select("rect").attr("fill", "#FFA500")
+          d3.select(this).select("text").attr("fill", "#FFA500")
+          // tooltip
+          //   .style("opacity", 1)
+        })
+        .on("mouseleave", function(event, d) {
+          d3.select(this).select("rect").attr("fill", d.color)
+          d3.select(this).select("text").attr("fill", "#FFFFFF")
+          // tooltip.style("opacity", 0)
+        })
+
+    },
+
+    createBookmarkDrag(){
+      function dragstarted(event) {
+        
+      }
+      function dragged(event) {
+        d3.select(this).attr("transform", `translate(${event.x} 0)`)
+      }
+      function dragended(event) {
+
+      }
+      this.drag = d3.drag().on("drag", dragged)
+    },
+
+    createKeyCompareGraph(){
+      var svg = d3.select('#key-svg').append("g")
+                  .attr("id", "key-compare")
+                  .style("font", "10px sans-serif")
+
+      var process = 'txlProcBranchH'
+      Object.keys(this.keyWords[process]).forEach((keyword, index) => {
+        // console.log(keyword)
+        var value = this.keyWords[process][keyword][0]
+        var globalIndex = this.keyWords[process][keyword][this.keyWords[process][keyword].length - 1]
+        var timestamp = this.keyWords[process][keyword][this.keyWords[process][keyword].length - 3]
+        
+        var d = []
+        var option = this.$common.getChartConfig()
+
+        if (keyword.includes('(d)')){
+          var categories = this.$common.arrayDuplicates(value)
+        }
+
+        option['yAxis'] = {
+          type: keyword.includes('(d)') ? 'category' : 'value',
+          name: keyword,
+          data: keyword.includes('(d)') ? categories : null
+        }
+        
+        // package xaxis data
+        if (keyword.includes('(d)')){
+          value.forEach((item, i) => {
+            d.push({'value': [parseInt(globalIndex[i]), item], 'origin':item, 'timestamp':timestamp[i]})
+          })
+        }else if(keyword.includes('(r)')){
+          return
+          // value.forEach((item, i) => {
+          //   var bit = parseInt(keyword.split('.')[2].replace('bit',''))
+          //   var hex2bin = this.$common.hex2bin(item)[31-bit]
+          //   d.push({'value': [parseInt(globalIndex[i]), hex2bin], 'origin':item, 'timestamp':timestamp[i]})
+          // })
+        }else{ //(c)
+          value.forEach((item, i) => {
+            d.push({'value': [parseInt(globalIndex[i]), item], 'origin':item, 'timestamp':timestamp[i]})
+          })
+        }
+
+        option['title']['text'] = keyword
+        option['xAxis']['type'] = 'value'
+        option['series'] = [
+                            {
+                              name: keyword,
+                              type: 'line',
+                              data: d,
+                              showSymbol: false,
+                            }
+                          ]
+
+        var makeLineAxis = []
+        var markLine = {
+          silent: true, // mouse move no event
+          symbol: 'none',
+          label:{
+            // color:'#FFFFFF',
+            fontSize:12,
+          },
+          lineStyle:{
+            type:'dotted',
+            width: 2
+          },
+          data:[]
+        }
+        Object.keys(this.highlightKeyword).forEach((item) => {
+          item.split(/,/).forEach((key) => {
+            if (this.invertedIndexTable.hasOwnProperty(key.toLowerCase()))
+            {
+              var intersec = this.$common.arrayIntersection(this.invertedIndexTable[key.toLowerCase()]['x'], Object.keys(this.originLogs[process]))
+              if (intersec.length > 0){
+                intersec.forEach((elm) => {
+                  // var pos = d3.bisect(globalPoints.map(v => {return parseInt(v)}), parseInt(elm));
+                  markLine['data'].push({'xAxis': parseInt(elm), 'label': {'color': this.highlightKeyword[item], 'formatter':key, 'fontSize':10}})
+                  makeLineAxis.push({'value':[parseInt(elm),0]})
+                })
               }
-            })
+            }
           })
         })
+        option['series'].push(
+          {
+            name: "highlight",
+            type: 'line',
+            showSymbol: false,
+            data: makeLineAxis,
+            markLine: markLine
+          }
+        )
+
+        option['tooltip']['formatter'] = function(params){
+          var ret = ''
+          params.forEach((param) => {
+            if(param['seriesName'].split('.')[0] != 'highlight'){
+              ret = ret + param.marker + param.data.timestamp +'<br/>'+ "&nbsp;&nbsp;&nbsp;&nbsp;" + param.seriesName + ":" + param.data.origin + '<br/>'
+            }
+          })
+          return ret;
+        }
+
+        var id = keyword.replace("(","").replace(")","")
+        svg.append("g")
+            .append("foreignObject")
+            .attr('x', index * 400 + 600)
+            .attr('y', 0)
+            .attr("width", 400)
+            .attr("height", 300)
+            .html(`<div id="${id}" style="width: 400px;height:300px;" >`)
+
+        var chart = echarts.init(document.getElementById(id), 'dark')
+        chart.setOption(option)
       })
-      if(this.paintCategory == 'sequential'){
-        this.$common.createSequentialCompareGraph(graphs, this.graphHeight, this.graphWidth, this.highlightKeyword, this.filterData, this.$router)
-      }else{
-        this.$common.createStatisticsCompareGraph(graphs, this.bisection)
-      }
     },
-    createKeyWordsTreeGraph(){
-      this.svg = d3.select(`#viz`).append("g")
-              .attr("id", "canvas")
-              .style("font", "10px sans-serif")
-            .append("g")
-              .attr("transform", `translate(0,400)`)
-      this.resetCoordinates()
-      this.$common.createTreeSvg(this.keyWordsTree, this.svg, this.filterData)
-    },
-    clearChildDoms(id){
-      var content = document.getElementById(id)
-      while (content.firstChild) {
-        content.removeChild(content.lastChild);
-      }
-    },
-    go () {
-      this.clearChildDoms('graphs')
-      this.createGraph()
-    },
+
     openHighlightModal(){
       var modal = document.getElementById("highlight-modal")
       modal.style.display = "block"
     },
+
     closeHighlightModal(){
       var modal = document.getElementById("highlight-modal")
       modal.style.display = "none"
     },
-    openPaintCategoryModal(){
-      var modal = document.getElementById("paint-category-modal")
-      modal.style.display = "block"
-    },
-    closePaintCategoryModal(){
-      var modal = document.getElementById("paint-category-modal")
-      modal.style.display = "none"
-    },
-    openKeyWordsTreeModal(){
-      var modal = document.getElementById("keywords-modal")
-      modal.style.display = "block"
-    },
-    closeKeyWordsTreeModal(){
-      var modal = document.getElementById("keywords-modal")
-      modal.style.display = "none"
-    },
-    openFullGraphModal(){
-      var modal = document.getElementById("full-graph-modal")
-      modal.style.display = "block"
-    },
-    closeFullGraphModal(){
-      var modal = document.getElementById("full-graph-modal")
-      modal.style.display = "none"
-    },
-    exportConfig(){
-      var res = {}
-      res['filterData'] = this.filterData
-      res['highlightKeyword'] = this.highlightKeyword
-      this.$common.exportJosnToLocalTxt(res, 'config.txt')
-    },
-    loadConfig(){
-      document.getElementById('fileInput').click()
-    },
+
     newHighlightItem(){
       let that = this
       var li = document.createElement("li");
+      li.setAttribute('class', "li-highlight")
       var inputValue = document.getElementById("highlight-input").value;
       var colorValue = document.getElementById("highlight-color").value;
       this.highlightKeyword[inputValue] = colorValue
@@ -326,11 +395,15 @@ export default {
         }
       }
     },
+
   }
 }
 </script>
 
 <style>
+@import '../assets/styles/common.css';
+@import '../assets/styles/modal.css';
+
 * {
   box-sizing: border-box;
 }
@@ -338,7 +411,7 @@ export default {
 html,body {
   font-family: Arial;
   height: 100%;
-  background: #000000;
+  background: #555;
   margin: 0px 0px 0px 0px;
   overflow: auto !important;
 }
@@ -349,77 +422,25 @@ html,body {
   /* overflow-y: hidden !important; */
 }
 
-.compare-view-topnav {
-  overflow: hidden;
-  background-color: #333;
-  color: white;
-  padding: 5px 0px 5px 0px;
-}
-
-.compare-view-topnav label{
-  font-size: 20px; /* Increased font size */
-  padding: 10px 10px 0px 10px;
-}
-
-.compare-view-topnav input{
-  background-color: white;
-  border: 1px solid black;
-}
-
-.compare-view-topnav .go{
-  float: right;
-  width: 200px;
-  text-align: center; /* Center-align text */
-  color: white; /* White text color */
-  font-size: 30px; /* Increased font size */
-  border: 1px solid black;
-}
-
-.compare-view-topnav .func{
-  float: left;
-  margin-right: 10px;
-  width: 200px;
-  text-align: center; /* Center-align text */
-  color: white; /* White text color */
-  font-size: 30px; /* Increased font size */
-  background-color: #FFCC00;
-}
-
-.compare-view-topnav a:hover {
-  background-color: #000; /* Add a hover color */
-}
-
-.graphs{
-  height: 100%;
-}
-
-.row {
+/***************************************** multi screen */
+.story-compare {
   width: 100%;
-  display: inline-block;
-  overflow-x: scroll;
-  overflow-y: hidden;
-  white-space: nowrap;
 }
 
-.row .name{
-  position: absolute;
-  z-index: 1;
-  writing-mode: tb-rl;
-  background-color: #555;
-  text-align: center;
-  color: white;
-  padding: 0px 5px 0px 5px;
-}
-
-.row .graph-row{
-  margin-left: 28px;
-}
-
-.row .graph-row div{
-  display: inline-block;
-  border-collapse: collapse;
-  border-spacing: 0;
+.story-compare .story1 {
+  float: left;
+  width: 50%;
   border: 1px solid rgb(255, 255, 255);
+}
+
+.story-compare .story2 {
+  float: left;
+  width: 50%;
+  border: 1px solid rgb(255, 255, 255);
+}
+
+.key-compare {
+  width: 100%;
 }
 
 </style>
