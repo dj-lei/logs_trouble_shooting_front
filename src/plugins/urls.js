@@ -1,6 +1,5 @@
 export const urls = {
-    logs_trouble_shooting: "query_index",
-    logs_key_values: "query_key_values",
+    query_index: "query_index",
     indices: "query_indices",
     running_indices: "query_running_indices",
     send_file: "post_log",

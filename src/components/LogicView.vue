@@ -94,7 +94,6 @@
 <script>
 import * as d3 from 'd3'
 import * as echarts from 'echarts'
-import common from '../plugins/common'
 
 export default {
   data () {
@@ -125,6 +124,7 @@ export default {
       isGraphFullScreen: false,
 
       // filter mode global var
+      cmd: '',
       cmdWords: [],
       filterFirstEntry: true,
       filterInvertedIndexTable:{},
@@ -148,6 +148,7 @@ export default {
       inputWord:'',
       inputCursorStart:0,
       keyAndWordFlag: false,
+      dropDownMouseOverFlag: false,
 
       viewMode: 'standard',
       prevViewMode: '',
@@ -243,51 +244,52 @@ export default {
     var rad = document.viewMode.mode;
     var prev = null;
     for (var i = 0; i < rad.length; i++) {
-        rad[i].addEventListener('change', function() {
-            if (this !== prev) {
-                prev = this;
+      rad[i].addEventListener('change', function() {
+          if (this !== prev) {
+              prev = this;
+          }
+          that.prevViewMode = that.viewMode
+          that.viewMode = this.value
+          that.modeSwitch()
+          if (this.value == 'filter') {
+            if(that.filterFirstEntry){
+              that.openFilterLogDetail(0, true)
+              that.filterFirstEntry = false
             }
-            that.prevViewMode = that.viewMode
-            that.viewMode = this.value
-            that.modeSwitch()
-            // that.$common.startLoading()
-            if (this.value == 'filter') {
-              if(that.filterFirstEntry){
-                that.openFilterLogDetail(0, true)
-                that.filterFirstEntry = false
-              }
-              if(that.isFilterGraphFullScreen == true){
-                document.getElementById("graph-detail-filter").style.left = "0%"
-                document.getElementById("graph-detail-filter").style.width = "100%"
-              }else if(that.isFilterLogFullScreen == true){
-                document.getElementById("log-detail-filter").style.width = "100%"
-              }else{
-                document.getElementById("log-detail-filter").style.width = "50%"
-                document.getElementById("graph-detail-filter").style.left = "50%"
-                document.getElementById("graph-detail-filter").style.width = "50%"
-              }
-            }else if(this.value == 'standard'){
-              if(that.isGraphFullScreen == true){
-                document.getElementById("graph-detail-standard").style.left = "0%"
-                document.getElementById("graph-detail-standard").style.width = "100%"
-              }else if(that.isLogFullScreen == true){
-                document.getElementById("log-detail-standard").style.width = "100%"
-              }else{
-                document.getElementById("log-detail-standard").style.width = "50%"
-                document.getElementById("graph-detail-standard").style.left = "50%"
-                document.getElementById("graph-detail-standard").style.width = "50%"
-              }
-            }else if(this.value == 'overview'){
-              if(that.data.length == 0){
-                that.resetStoryLineCoordinates()
-                that.convertOriginLogsToStoryLine()
-                that.createStoryLineGraph()
-                that.createHighlightPoint()
-              }
+            if(that.isFilterGraphFullScreen == true){
+              document.getElementById("graph-detail-filter").style.left = "0%"
+              document.getElementById("graph-detail-filter").style.width = "100%"
+            }else if(that.isFilterLogFullScreen == true){
+              document.getElementById("log-detail-filter").style.width = "100%"
+            }else{
+              document.getElementById("log-detail-filter").style.width = "50%"
+              document.getElementById("graph-detail-filter").style.left = "50%"
+              document.getElementById("graph-detail-filter").style.width = "50%"
+            }
+            setTimeout(function(){ 
+              document.getElementById("cmd").value = that.cmd
+            }, 50)
+          }else if(this.value == 'standard'){
+            if(that.isGraphFullScreen == true){
+              document.getElementById("graph-detail-standard").style.left = "0%"
+              document.getElementById("graph-detail-standard").style.width = "100%"
+            }else if(that.isLogFullScreen == true){
+              document.getElementById("log-detail-standard").style.width = "100%"
+            }else{
+              document.getElementById("log-detail-standard").style.width = "50%"
+              document.getElementById("graph-detail-standard").style.left = "50%"
+              document.getElementById("graph-detail-standard").style.width = "50%"
+            }
+          }else if(this.value == 'overview'){
+            if(that.data.length == 0){
+              that.resetStoryLineCoordinates()
+              that.convertOriginLogsToStoryLine()
+              that.createStoryLineGraph()
               that.createHighlightPoint()
             }
-            // that.$common.stopLoading()
-        });
+            that.createHighlightPoint()
+          }
+      });
     }
     this.getIndex(this.index)
     this.initHighlightModal()
@@ -295,7 +297,7 @@ export default {
   },
   methods: {
     async getIndex (index) {
-      await this.$http.get(this.$urls.logs_trouble_shooting, {
+      await this.$http.get(this.$urls.query_index, {
         params: {
           index: index
         },
@@ -307,6 +309,7 @@ export default {
 
           this.keyWordsTree = this.$common.generateKeyWordsTree(this.keyWords)
           this.createKeyWordsTreeGraph()
+          this.openKeyWordsTreeModal()
           // for (var i = 0; i < this.data.length; i++) {
           //   if(this.data[i]['process'] == this.process){
           //     this.graphLogData = this.data[i]
@@ -1372,8 +1375,6 @@ export default {
             that.filter() 
             that.$common.stopLoading()
           }, 50);
-          
-          // this.$common.stopLoading()
         }
       }else if(event.key == 'Backspace'){
         if(this.inputWord.length > 0){
@@ -1400,6 +1401,7 @@ export default {
         this.inputWord = this.inputWord + event.key 
         this.filterKeyWordsEvent()
       }
+      this.cmd = document.getElementById("cmd").value
     },
     filterKeyWordsEvent(){
       let that = this
@@ -1421,7 +1423,13 @@ export default {
             that.$common.removeAllChildDom('groups')
             that.inputWord = ''
             that.keyAndWordFlag = false
-            this.arrowEventNum = -1
+            that.arrowEventNum = -1
+          }
+          li.onmouseover = function(){
+            that.dropDownMouseOverFlag = true
+          }
+          li.onmouseout = function(){
+            that.dropDownMouseOverFlag = false
           }
           document.getElementById('groups').appendChild(li)
           num = num + 1
@@ -1435,7 +1443,9 @@ export default {
       }
     },
     filterInputBlurEvent(){
-      this.$common.removeAllChildDom('groups')
+      if(this.dropDownMouseOverFlag == false){
+        this.$common.removeAllChildDom('groups')
+      }
     },
 //////////////////////////// COMMON //////////////////////////
     closeLogDetail() {
