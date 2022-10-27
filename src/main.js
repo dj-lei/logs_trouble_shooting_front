@@ -10,6 +10,7 @@ import common from '@/plugins/common'
 import LogicView from './components/LogicView.vue'
 import CompareView from './components/CompareView.vue'
 import Home from './components/Home.vue'
+import KnowledgeNetworkEditView from './components/KnowledgeNetworkEdit.vue'
 
 Vue.config.productionTip = false
 
@@ -20,7 +21,7 @@ Vue.prototype.$common = common
 import VueRouter from 'vue-router'
 const router = new VueRouter({
   routes: [
-    { path: '/', component: Home },
+    { path: '/', component: KnowledgeNetworkEditView },
     { path: '/logicview', component: LogicView },
     { path: '/compareview', component: CompareView },
   ]
