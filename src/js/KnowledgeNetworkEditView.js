@@ -342,7 +342,6 @@ class Symbol
         this.svg.node().append(documentElement)
         this.svg.call(this.drag)
         this.box = this.svg.node().getBBox()
-        console.log(this.svg.node())
     }
 
     initDrag(){
