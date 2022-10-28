@@ -1,6 +1,9 @@
 const axios = require('axios')
 import * as d3 from "d3"
 import * as echarts from 'echarts'
+import urls from '@/plugins/urls'
+import service from '@/plugins/http'
+
 
 class KnowledgeNetworkEditView
 {
@@ -462,7 +465,7 @@ class AnchorApi
             .html('<div class="children" style="background:white;width: 300px;height:200px;" >')
 
         this.run_ins = setInterval(function() {
-            axios.get('http://localhost:8000/get_random', {
+            service.get(urls.get_random, {
                 params: {
                     cmd: that.config.cmd,
                     regex: that.config.regex
@@ -775,7 +778,7 @@ class DialogAnchorApi
     test(){
         this.cmd = this.cmdI.value
         this.regex = this.regexI.value
-        axios.get('http://localhost:8000/get_random', {
+        service.get(urls.get_random, {
             params: {
                 cmd: this.cmd,
                 regex: this.regex
