@@ -329,6 +329,7 @@ class Symbol
         this.zoomRate = 1
         this.childCanvas = 'Canvas2'
         this.childContainerSymbol = []
+        this.mouse_position = {'x': 0, 'y': 0}
         this.initDrag()
         this.init(documentElement, name)
     }
@@ -345,10 +346,12 @@ class Symbol
     }
 
     initDrag(){
+        let that = this
         function dragstarted(event) {
+            that.mouse_position = {'x': event.x, 'y': event.y}
         }
         function dragged(event) {
-            d3.select(this).attr("transform", `translate(${event.x}, ${event.y})`)
+            d3.select(this).attr("transform", `translate(${event.x - that.mouse_position.x}, ${event.y - that.mouse_position.y})`)
         }
         function dragended(event) {
         }
@@ -412,6 +415,7 @@ class AnchorApi
         this.run_ins = ''
         this.history_data_pool = []
         this.config = null
+        this.mouse_position = {'x': 0, 'y': 0}
         this.initDrag()
         this.init()
     }
@@ -432,15 +436,23 @@ class AnchorApi
             .on("click", function(event) {
                 that.openDialog()
             })
+            .on("mouseover", function(event, d) {
+                d3.select(this).style("stroke", "white")
+            })
+            .on("mouseleave", function(event, d) {
+                d3.select(this).style("stroke", "gray")
+            })
 
         this.svg.call(this.drag)
     }
 
     initDrag(){
+        let that = this
         function dragstarted(event) {
+            that.mouse_position = {'x': event.x, 'y': event.y}
         }
         function dragged(event) {
-            d3.select(this).attr("transform", `translate(${event.x}, ${event.y})`)
+            d3.select(this).attr("transform", `translate(${event.x - that.mouse_position.x}, ${event.y - that.mouse_position.y})`)
         }
         function dragended(event) {
         }
@@ -565,6 +577,7 @@ class AnchorJump
         this.svg = ''
         this.drag = ''
         this.config = null
+        this.mouse_position = {'x': 0, 'y': 0}
         this.initDrag()
         this.init()
     }
@@ -586,6 +599,7 @@ class AnchorJump
                 that.openDialog()
             })
             .on("mouseover", function(event, d) {
+                d3.select(this).style("stroke", "white")
                 if(that.config != null){
                     that.parent.tooltip
                     .style("margin-left", `${event.x}px`)
@@ -595,17 +609,19 @@ class AnchorJump
                 }
             })
             .on("mouseleave", function(event, d) {
-                // that.parent.tooltip.style("opacity", 0)
+                d3.select(this).style("stroke", "gray")
             })
 
         this.svg.call(this.drag)
     }
 
     initDrag(){
+        let that = this
         function dragstarted(event) {
+            that.mouse_position = {'x': event.x, 'y': event.y}
         }
         function dragged(event) {
-            d3.select(this).attr("transform", `translate(${event.x}, ${event.y})`)
+            d3.select(this).attr("transform", `translate(${event.x - that.mouse_position.x}, ${event.y - that.mouse_position.y})`)
         }
         function dragended(event) {
         }
@@ -698,8 +714,9 @@ class DialogAnchorApi
 
         var returnL = document.createElement('label')
         returnL.innerHTML = 'RETURN'
-        this.returnI = document.createElement('input')
-        this.returnI.type = 'text'
+        this.returnI = document.createElement('textarea')
+        this.returnI.rows = '20'
+        this.returnI.cols = '50'
         this.returnI.placeholder = 'cmd return'
         this.returnI.style.width = '100%'
         this.returnI.style.padding = '12px 20px'
