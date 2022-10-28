@@ -21,9 +21,10 @@ Vue.prototype.$common = common
 import VueRouter from 'vue-router'
 const router = new VueRouter({
   routes: [
-    { path: '/', component: KnowledgeNetworkEditView },
+    { path: '/', component: Home },
     { path: '/logicview', component: LogicView },
     { path: '/compareview', component: CompareView },
+    { path: '/knowledgenetworkedit', component: KnowledgeNetworkEditView },
   ]
 });
 Vue.use(VueRouter)

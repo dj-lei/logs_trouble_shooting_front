@@ -29,7 +29,8 @@ class KnowledgeNetworkEditView
         screen.append(upload)
     
         this.addRunButton()
-        this.addAnchorButton()
+        this.addAnchorApiButton()
+        this.addAnchorJumpButton()
         this.addUploadButton()
         this.addAddCanvasButton()
 
@@ -86,7 +87,7 @@ class KnowledgeNetworkEditView
         document.getElementById('bottom-nav').appendChild(upload)
     }
 
-    addAnchorButton()
+    addAnchorApiButton()
     {
         let that = this
         var anchor = document.createElement('button')
@@ -98,10 +99,30 @@ class KnowledgeNetworkEditView
         anchor.style.padding = '14px 16px'
         anchor.style.fontSize = '17px'
         anchor.style.width = '5%'
-        anchor.innerHTML = 'ANCHOR'
+        anchor.innerHTML = 'ANCHOR API'
         anchor.addEventListener('click', function()
         {
-            that.containerCanvas[that.activeCanvas].insertAnchor()
+            that.containerCanvas[that.activeCanvas].insertAnchorApi()
+        })
+        document.getElementById('bottom-nav').appendChild(anchor)
+    }
+
+    addAnchorJumpButton()
+    {
+        let that = this
+        var anchor = document.createElement('button')
+        anchor.style.backgroundColor = '#555'
+        anchor.style.color = 'white'
+        anchor.style.float = 'left'
+        anchor.style.border = '1px solid rgb(0, 0, 0)'
+        anchor.style.cursor = 'pointer'
+        anchor.style.padding = '14px 16px'
+        anchor.style.fontSize = '17px'
+        anchor.style.width = '5%'
+        anchor.innerHTML = 'ANCHOR JUMP'
+        anchor.addEventListener('click', function()
+        {
+            that.containerCanvas[that.activeCanvas].insertAnchorJump()
         })
         document.getElementById('bottom-nav').appendChild(anchor)
     }
@@ -182,6 +203,7 @@ class Canvas
         this.ins = ''
         this.name = name
         this.svg = ''
+        this.tooltip = ''
         this.transform = {}
         this.containerSymbol = []
         this.containerAnchor = []
@@ -199,7 +221,12 @@ class Canvas
         svg.setAttribute('id', this.name)
         svg.setAttribute('width', '100%')
         svg.setAttribute('height', document.body.offsetHeight - 50)
+
+        var tooltip = document.createElement('div')
+        tooltip.setAttribute('id', this.name+'-tooltip')
+
         tabcontent.appendChild(svg)
+        tabcontent.appendChild(tooltip)
 
         document.getElementById('container-canvas').appendChild(tabcontent)
         this.resetCoordinates()
@@ -207,6 +234,22 @@ class Canvas
         this.svg = d3.select(`#${this.name}`).append("g")
             .attr("id", "canvas")
             .style("font", "8px sans-serif")
+
+        this.tooltip = d3.select(`#${this.name}-tooltip`).call(this.createTooltip)
+    }
+
+    createTooltip(el) {
+        el
+        .style("position", "absolute")
+        .style("top", 0)
+        .style("opacity", 0)
+        .style("background", "white")
+        .style("border-radius", "5px")
+        .style("box-shadow", "0 0 10px rgba(0,0,0,.25)")
+        .style("padding", "10px")
+        .style("line-height", "1.3")
+        .style("font", "11px sans-serif")
+        // .style("cursor", 'pointer')
     }
 
     resetCoordinates()
@@ -219,7 +262,7 @@ class Canvas
             const {transform} = event
             that.transform = transform
             that.svg.attr("transform", transform)
-            that.refreshSymbol()
+            // that.refreshSymbol()
         }
     }
 
@@ -260,9 +303,14 @@ class Canvas
         }
     }
 
-    insertAnchor()
+    insertAnchorApi()
     {
-        this.containerAnchor.push(new Anchor(this.ins))
+        this.containerAnchor.push(new AnchorApi(this.ins))
+    }
+
+    insertAnchorJump()
+    {
+        new AnchorJump(this.ins)
     }
 }
 
@@ -290,9 +338,7 @@ class Symbol
         this.svg.node().append(documentElement)
         this.svg.call(this.drag)
         this.box = this.svg.node().getBBox()
-        // if((this.parent.svg.node().getBBox().width > this.box.width)&(this.parent.svg.node().getBBox().height > this.box.height)){
-        //     this.zoomRate = 1
-        // }
+        console.log(this.svg.node())
     }
 
     initDrag(){
@@ -351,7 +397,7 @@ class Symbol
 }
 
 
-class Anchor
+class AnchorApi
 {
     constructor(parent){
         this.parent = parent
@@ -399,7 +445,9 @@ class Anchor
     }
 
     openDialog(){
-        this.config = new DialogAnchor()
+        if(this.config == null){
+            this.config = new DialogAnchorApi()
+        }
         this.config.open()
     }
 
@@ -416,15 +464,17 @@ class Anchor
         this.run_ins = setInterval(function() {
             axios.get('http://localhost:8000/get_random', {
                 params: {
+                    cmd: that.config.cmd,
+                    regex: that.config.regex
                 },
                 })
                 .then(response => {
                     let series = []
                     let names = []
                     let tmp = []
-                    let key = 'TEST'
+                    let key = that.config.desc
 
-                    that.history_data_pool.push(response.data.content)
+                    that.history_data_pool.push(response.data.content[0])
                     tmp = that.sliceYAxisQueueHandle(that.history_data_pool, 30)
                     series.push({'name':key, 'type':'line', 'showSymbol':false, 'data':tmp})
                     names.push(key)
@@ -435,7 +485,6 @@ class Anchor
                     }else{
                       ins.setOption(that.getChartConfig(names, series, that.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
                     }
-                    console.log(response.data.content)
                 })
         }, this.refresh_interval)
     }
@@ -506,10 +555,82 @@ class Anchor
     }
 }
 
-class DialogAnchor
+class AnchorJump
+{
+    constructor(parent){
+        this.parent = parent
+        this.svg = ''
+        this.drag = ''
+        this.config = null
+        this.initDrag()
+        this.init()
+    }
+
+    init()
+    {
+        let that = this
+        this.svg = this.parent.svg.append("g")
+            // .attr("id", this.name)
+            .attr("class", 'anchor')
+
+        this.svg.append("circle")
+            .style("stroke", "gray")
+            .style("fill", "yellow")
+            .attr("r", 10)
+            .attr("cx", 10)
+            .attr("cy", 10)
+            .on("click", function(event) {
+                that.openDialog()
+            })
+            .on("mouseover", function(event, d) {
+                if(that.config != null){
+                    that.parent.tooltip
+                    .style("margin-left", `${event.x}px`)
+                    .style("margin-top", `${event.y-60}px`)
+                    .style("opacity", 1)
+                    .html(that.getTooltipContent(that.config.jumpCanvas))
+                }
+            })
+            .on("mouseleave", function(event, d) {
+                // that.parent.tooltip.style("opacity", 0)
+            })
+
+        this.svg.call(this.drag)
+    }
+
+    initDrag(){
+        function dragstarted(event) {
+        }
+        function dragged(event) {
+            d3.select(this).attr("transform", `translate(${event.x}, ${event.y})`)
+        }
+        function dragended(event) {
+        }
+        this.drag = d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended)
+    }
+
+    getTooltipContent(d) {
+        return `<button onclick="document.getElementById('${d}-nav').click()">${d}</button>`
+    }
+
+    openDialog(){
+        if(this.config == null){
+            this.config = new DialogAnchorJump()
+        }
+        this.config.open()
+    }
+}
+
+class DialogAnchorApi
 {
     constructor(){
         this.modal = null
+        this.desc = ''
+        this.cmd = ''
+        this.regex = ''
+        this.descI = ''
+        this.cmdI = ''
+        this.regexI = ''
         this.returnI = ''
         this.init()
     }
@@ -538,27 +659,39 @@ class DialogAnchor
 
         var descL = document.createElement('label')
         descL.innerHTML = 'DESC'
-        var descI = document.createElement('input')
-        descI.type = 'text'
-        descI.placeholder = 'description here'
-        descI.style.width = '100%'
-        descI.style.padding = '12px 20px'
-        descI.style.margin = '8px 0'
-        descI.style.display = 'inline-block'
-        descI.style.border = '1px solid #ccc'
-        descI.style.boxSizing= 'border-box'
+        this.descI = document.createElement('input')
+        this.descI.type = 'text'
+        this.descI.placeholder = 'description here'
+        this.descI.style.width = '100%'
+        this.descI.style.padding = '12px 20px'
+        this.descI.style.margin = '8px 0'
+        this.descI.style.display = 'inline-block'
+        this.descI.style.border = '1px solid #ccc'
+        this.descI.style.boxSizing= 'border-box'
 
         var cmdL = document.createElement('label')
         cmdL.innerHTML = 'CMD'
-        var cmdI = document.createElement('input')
-        cmdI.type = 'text'
-        cmdI.placeholder = 'input cmd here'
-        cmdI.style.width = '100%'
-        cmdI.style.padding = '12px 20px'
-        cmdI.style.margin = '8px 0'
-        cmdI.style.display = 'inline-block'
-        cmdI.style.border = '1px solid #ccc'
-        cmdI.style.boxSizing= 'border-box'
+        this.cmdI = document.createElement('input')
+        this.cmdI.type = 'text'
+        this.cmdI.placeholder = 'input cmd here'
+        this.cmdI.style.width = '100%'
+        this.cmdI.style.padding = '12px 20px'
+        this.cmdI.style.margin = '8px 0'
+        this.cmdI.style.display = 'inline-block'
+        this.cmdI.style.border = '1px solid #ccc'
+        this.cmdI.style.boxSizing= 'border-box'
+
+        var regexL = document.createElement('label')
+        regexL.innerHTML = 'REGEX'
+        this.regexI = document.createElement('input')
+        this.regexI.type = 'text'
+        this.regexI.placeholder = 'input regex here'
+        this.regexI.style.width = '100%'
+        this.regexI.style.padding = '12px 20px'
+        this.regexI.style.margin = '8px 0'
+        this.regexI.style.display = 'inline-block'
+        this.regexI.style.border = '1px solid #ccc'
+        this.regexI.style.boxSizing= 'border-box'
 
         var returnL = document.createElement('label')
         returnL.innerHTML = 'RETURN'
@@ -572,17 +705,142 @@ class DialogAnchor
         this.returnI.style.border = '1px solid #ccc'
         this.returnI.style.boxSizing= 'border-box'
 
+        var apply = document.createElement('button')
+        apply.type = 'submit'
+        apply.innerHTML = 'APPLY'
+        apply.style.backgroundColor = 'green'
+        apply.style.color = 'white'
+        apply.style.padding = '14px 20px'
+        apply.style.margin = '8px 0'
+        apply.style.border = 'none'
+        apply.style.cursor = 'pointer'
+        apply.style.width = '33%'
+        apply.onclick = function(){that.apply()}
+
         var test = document.createElement('button')
         test.type = 'submit'
         test.innerHTML = 'TEST'
-        test.style.backgroundColor = '#04AA6D'
+        test.style.backgroundColor = 'blue'
         test.style.color = 'white'
         test.style.padding = '14px 20px'
         test.style.margin = '8px 0'
         test.style.border = 'none'
         test.style.cursor = 'pointer'
-        test.style.width = '50%'
+        test.style.width = '33%'
         test.onclick = function(){that.test()}
+
+        var cancel = document.createElement('button')
+        cancel.innerHTML = 'CANCEL'
+        cancel.style.backgroundColor = 'red'
+        cancel.style.color = 'white'
+        cancel.style.padding = '14px 20px'
+        cancel.style.margin = '8px 0'
+        cancel.style.border = 'none'
+        cancel.style.cursor = 'pointer'
+        cancel.style.width = '33%'
+        cancel.onclick = function(){that.close()}
+
+        container.appendChild(descL)
+        container.appendChild(this.descI)
+        container.appendChild(cmdL)
+        container.appendChild(this.cmdI)
+        container.appendChild(regexL)
+        container.appendChild(this.regexI)
+        container.appendChild(returnL)
+        container.appendChild(this.returnI)
+        container.appendChild(apply)
+        container.appendChild(test)
+        container.appendChild(cancel)
+        this.modal.appendChild(container)
+
+        var screen = document.getElementById('screen')
+        screen.append(this.modal)
+    }
+
+    apply(){
+        this.desc = this.descI.value
+        this.cmd = this.cmdI.value
+        this.regex = this.regexI.value
+        this.close()
+    }
+
+    open(){
+        this.modal.style.display = "block"
+    }
+
+    close(){
+        this.modal.style.display = "none"
+    }
+
+    test(){
+        this.cmd = this.cmdI.value
+        this.regex = this.regexI.value
+        axios.get('http://localhost:8000/get_random', {
+            params: {
+                cmd: this.cmd,
+                regex: this.regex
+            },
+            })
+            .then(response => {
+                this.returnI.value = response.data.content
+            })
+    }
+}
+
+class DialogAnchorJump
+{
+    constructor(){
+        this.modal = null
+        this.jumpCanvas = ''
+        this.jumpCanvasI = ''
+        this.init()
+    }
+
+    init(){
+        let that = this
+
+        this.modal = document.createElement('div')
+        this.modal.style.display = 'none'
+        this.modal.style.position = 'fixed'
+        this.modal.style.zIndex = '1'
+        this.modal.style.left = 0
+        this.modal.style.top = 0
+        this.modal.style.width = '100%'
+        this.modal.style.height = '100%'
+        this.modal.style.overflow = 'auto'
+        this.modal.style.backgroundColor = 'rgb(0,0,0)'
+        this.modal.style.backgroundColor = 'rgba(0,0,0,0.4)'
+        this.modal.style.paddingTop = '60px'
+
+        var container = document.createElement('div')
+        container.style.backgroundColor = '#fefefe'
+        container.style.margin = '5% auto 15% auto'
+        container.style.border = '1px solid #888'
+        container.style.width = '40%'
+
+        var jumpCanvasL = document.createElement('label')
+        jumpCanvasL.innerHTML = 'BIND CANVAS'
+        this.jumpCanvasI = document.createElement('input')
+        this.jumpCanvasI.type = 'text'
+        this.jumpCanvasI.placeholder = 'Enter the canvas to be bound'
+        this.jumpCanvasI.style.width = '100%'
+        this.jumpCanvasI.style.padding = '12px 20px'
+        this.jumpCanvasI.style.margin = '8px 0'
+        this.jumpCanvasI.style.display = 'inline-block'
+        this.jumpCanvasI.style.border = '1px solid #ccc'
+        this.jumpCanvasI.style.boxSizing= 'border-box'
+
+        var apply = document.createElement('button')
+        apply.type = 'submit'
+        apply.innerHTML = 'APPLY'
+        apply.style.backgroundColor = '#04AA6D'
+        apply.style.color = 'white'
+        apply.style.padding = '14px 20px'
+        apply.style.margin = '8px 0'
+        apply.style.border = 'none'
+        apply.style.cursor = 'pointer'
+        apply.style.width = '50%'
+        apply.onclick = function(){that.apply()}
 
         var cancel = document.createElement('button')
         cancel.innerHTML = 'CANCEL'
@@ -595,13 +853,9 @@ class DialogAnchor
         cancel.style.width = '50%'
         cancel.onclick = function(){that.close()}
 
-        container.appendChild(descL)
-        container.appendChild(descI)
-        container.appendChild(cmdL)
-        container.appendChild(cmdI)
-        container.appendChild(returnL)
-        container.appendChild(this.returnI)
-        container.appendChild(test)
+        container.appendChild(jumpCanvasL)
+        container.appendChild(this.jumpCanvasI)
+        container.appendChild(apply)
         container.appendChild(cancel)
         this.modal.appendChild(container)
 
@@ -617,14 +871,8 @@ class DialogAnchor
         this.modal.style.display = "none"
     }
 
-    test(){
-        axios.get('http://localhost:8000/get_random', {
-            params: {
-            },
-            })
-            .then(response => {
-                this.returnI.value = response.data.content
-            })
+    apply(){
+        this.jumpCanvas = this.jumpCanvasI.value
     }
 }
 export {KnowledgeNetworkEditView}
