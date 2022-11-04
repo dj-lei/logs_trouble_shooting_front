@@ -1,4 +1,3 @@
-const axios = require('axios')
 import * as d3 from "d3"
 import * as echarts from 'echarts'
 import urls from '@/plugins/urls'
@@ -488,7 +487,7 @@ class AnchorApi
                     let tmp = []
                     let key = that.config.desc
 
-                    that.history_data_pool.push(response.data.content[0])
+                    that.history_data_pool.push(parseFloat(response.data.content))
                     tmp = that.sliceYAxisQueueHandle(that.history_data_pool, 30)
                     series.push({'name':key, 'type':'line', 'showSymbol':false, 'data':tmp})
                     names.push(key)

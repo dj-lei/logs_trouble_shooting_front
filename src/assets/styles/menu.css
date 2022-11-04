@@ -1,0 +1,15 @@
+.buttomNav {
+
+}
+
+.buttomNav button {
+    width: 5%;
+    float: left;
+    color: white;
+    padding: 14px 16px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    background-color: #555;
+    font-size: 17px;
+}

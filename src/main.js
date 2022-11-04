@@ -11,6 +11,7 @@ import LogicView from './components/LogicView.vue'
 import CompareView from './components/CompareView.vue'
 import Home from './components/Home.vue'
 import KnowledgeNetworkEditView from './components/KnowledgeNetworkEdit.vue'
+import TextLogicView from './components/TextLogicView.vue'
 
 Vue.config.productionTip = false
 
@@ -25,10 +26,12 @@ const router = new VueRouter({
     { path: '/logicview', component: LogicView },
     { path: '/compareview', component: CompareView },
     { path: '/knowledgenetworkedit', component: KnowledgeNetworkEditView },
+    { path: '/textlogicview', component: TextLogicView },
   ]
 });
 Vue.use(VueRouter)
 
+console.warn = () => {}
 new Vue({
   router,
   render: h => h(App)
