@@ -768,6 +768,17 @@ export default {
       return Array(Math.max(x.length, y.length)).fill().map((_,i) => [x[i], y[i]]);
     },
 
+    removeAll(dom){
+      this.removeAllChild(dom)
+      dom.parentNode.removeChild(dom)
+    },
+
+    removeAllChild(dom){
+      while (dom.firstChild) {
+        dom.removeChild(dom.lastChild)
+      }
+    },
+
     removeAllChildDom(id){
       var divGraphs = document.getElementById(id)
       while (divGraphs.firstChild) {

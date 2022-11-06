@@ -148,12 +148,16 @@ class FileViewer
           'Content-Type': 'multipart/form-data'
           }
         }
-
+        var start = new Date()
         await service.post(urls.open_file, formData, config).then(
             (response)=>{
+                var end   = new Date()
+                console.log((end.getTime() - start.getTime()) / 1000)
                 that.lines = response.data.lines
                 that.invertedIndexTable = response.data.invertedIndexTable
                 that.init()
+                var end   = new Date()
+                console.log((end.getTime() - start.getTime()) / 1000)
                 document.getElementById(that.name+'-tablink').click()
             }, (error) => {
                 alert("Log File Format ERROR or Not Support Currently!");
@@ -423,6 +427,10 @@ class SearchAtom extends SearchDialog
         this.select = {}
         this.resButton = ''
         this.resTable = ''
+        this.desc.value = "search test"
+        this.expSearch.value = "txlProcBranchE & (pmb | txAtt)"
+        // this.expRegex.value = "%{STRING:device}: \\[%{TIMESTAMP:time}\\] \\(%{STRING:cost}\\) %{STRING:name} %{STRING:trace}: %{DROP:tmp}txAtt:%{INT:txAtt}, txAttPeak:%{INT:txAttPeak},%{DROP:tmp}torTemperature:%{INT:torTemperature} "
+
     }
 
     register(position){
@@ -430,10 +438,6 @@ class SearchAtom extends SearchDialog
     }
 
     async search(){
-        this.desc.value = "search test"
-        this.expSearch.value = "txlProcBranchE & (pmb | txAtt)"
-        this.expRegex.value = "%{STRING:device}: \\[%{TIMESTAMP:time}\\] \\(%{STRING:cost}\\) %{STRING:name} %{STRING:trace}: %{DROP:tmp}txAtt:%{INT:txAtt}, txAttPeak:%{INT:txAttPeak},%{DROP:tmp}torTemperature:%{INT:torTemperature} "
-
         let that = this
         await service.get(urls.search, {
         params: {
@@ -453,9 +457,18 @@ class SearchAtom extends SearchDialog
 
                 that.resButton = document.createElement('div')
 
+                var del = document.createElement('button')
+                del.style.backgroundColor = '#777'
+                del.style.width = '2%'
+                del.style.border = '1px solid #ddd'
+                del.style.color = 'white'
+                del.style.cursor = 'pointer'
+                del.fontSize = '15px'
+                del.innerHTML = 'X'
+
                 var search = document.createElement('button')
                 search.style.backgroundColor = '#777'
-                search.style.width = '5%'
+                search.style.width = '2%'
                 search.style.border = '1px solid #ddd'
                 search.style.color = 'white'
                 search.style.cursor = 'pointer'
@@ -464,14 +477,15 @@ class SearchAtom extends SearchDialog
 
                 var collapsible = document.createElement('button')
                 collapsible.style.backgroundColor = '#777'
-                collapsible.style.width = '95%'
+                collapsible.style.width = '96%'
                 collapsible.style.border = '1px solid #ddd'
                 collapsible.style.textAlign = 'left'
                 collapsible.style.color = 'white'
                 collapsible.style.cursor = 'pointer'
                 collapsible.fontSize = '15px'
                 collapsible.className = 'collapsible'
-                collapsible.innerHTML = that.desc.value
+                collapsible.innerHTML = that.desc.value + ` (${that.res.res_search_lines.length} hits)`
+                that.resButton.append(del)
                 that.resButton.append(search)
                 that.resButton.append(collapsible)
         
@@ -479,23 +493,7 @@ class SearchAtom extends SearchDialog
                 that.resTable.style.display = 'block'
                 that.resTable.className = 'content'
                 that.res.res_search_lines.forEach((line) => {
-                    var tr = document.createElement('tr')
-                    var td = document.createElement('td')
-                    td.style.color = '#FFF'
-                    td.style.whiteSpace = 'nowrap'
-                    td.style.textAlign = 'left'
-                    td.style.fontSize = '12px'
-                    td.innerText = that.parent.lines[line]
-                    tr.appendChild(td)
-                    tr.addEventListener('click', function()
-                    {
-                        var lineActive = document.getElementsByClassName("line-active")
-                        for (var i = 0; i < lineActive.length; i++) {
-                            lineActive[i].style.backgroundColor = "#000"
-                        }
-                        tr.style.backgroundColor = '#000099'
-                        tr.className = 'line-active'
-                    })
+                    var tr = that.addLine(line)
                     tr.addEventListener('dblclick', function()
                     {
                         that.parent.scrollOriginJump(parseInt(this.getAttribute('line')))
@@ -509,6 +507,11 @@ class SearchAtom extends SearchDialog
                 that.parent.searchArea.append(that.resTable)
         
                 // bind button click event
+                del.addEventListener("click", function() {
+                    common.removeAll(that.resTable)
+                    common.removeAll(that.resButton)
+                })
+
                 search.addEventListener("click", function() {
                     that.open()
                 })
@@ -527,18 +530,11 @@ class SearchAtom extends SearchDialog
                 while (that.resTable.firstChild) {
                     that.resTable.removeChild(that.resTable.lastChild)
                 }
-                that.resButton.innerHTML = that.desc.value
                 that.res.res_search_lines.forEach((line) => {
-                    var tr = document.createElement('tr')
-                    var td = document.createElement('td')
-                    td.style.color = '#FFF'
-                    td.style.whiteSpace = 'nowrap'
-                    td.style.textAlign = 'left'
-                    td.style.fontSize = '12px'
-                    td.innerText = that.parent.lines[line]
-                    tr.appendChild(td)
-                    that.resTable.appendChild(tr)
+                    that.resTable.appendChild(that.addLine(line))
                 })
+                that.parent.shutAllSearch()
+                that.resTable.style.display = "block"
                 that.parent.updateSearch(that)
             }
             that.close()
@@ -547,6 +543,28 @@ class SearchAtom extends SearchDialog
         // handle error
             console.log(error);
         })
+    }
+
+    addLine(line){
+        var tr = document.createElement('tr')
+        var td = document.createElement('td')
+        td.style.color = '#FFF'
+        td.style.whiteSpace = 'nowrap'
+        td.style.textAlign = 'left'
+        td.style.fontSize = '12px'
+        td.innerText = this.parent.lines[line]
+        tr.appendChild(td)
+
+        tr.addEventListener('click', function()
+        {
+            var lineActive = document.getElementsByClassName("line-active")
+            for (var i = 0; i < lineActive.length; i++) {
+                lineActive[i].style.backgroundColor = "#000"
+            }
+            tr.style.backgroundColor = '#000099'
+            tr.className = 'line-active'
+        })
+        return tr
     }
 }
 
